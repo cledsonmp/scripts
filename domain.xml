@@ -1,0 +1,2639 @@
+<?xml version='1.0' encoding='UTF-8'?>
+
+<domain xmlns="urn:jboss:domain:1.8">
+
+
+
+    <system-properties>
+        <property name="FGO_PRONAMPE_API_KEY_NAME" value="gw-app-key" boot-time="false"/>
+        <property name="FGO_PRONAMPE_API_KEY" value="b82315c0c31e0135776b005056891bef" boot-time="false"/>
+    </system-properties>
+
+
+    <profiles>
+        <profile name="default">
+            <subsystem xmlns="urn:jboss:domain:logging:1.5">
+                <periodic-rotating-file-handler name="FILE" autoflush="true">
+                    <formatter>
+                        <named-formatter name="PATTERN"/>
+                    </formatter>
+                    <file relative-to="jboss.server.log.dir" path="server.log"/>
+                    <suffix value=".yyyy-MM-dd"/>
+                    <append value="true"/>
+                </periodic-rotating-file-handler>
+                <logger category="com.arjuna">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="org.apache.tomcat.util.modeler">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="org.jboss.as.config">
+                    <level name="DEBUG"/>
+                </logger>
+                <logger category="sun.rmi">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb.config">
+                    <level name="ERROR"/>
+                </logger>
+                <root-logger>
+                    <level name="INFO"/>
+                    <handlers>
+                        <handler name="FILE"/>
+                    </handlers>
+                </root-logger>
+                <formatter name="PATTERN">
+                    <pattern-formatter pattern="%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+                </formatter>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:configadmin:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:datasources:1.2">
+                <datasources>
+                    <datasource jndi-name="java:jboss/datasources/ExampleDS" pool-name="ExampleDS" enabled="true" use-java-context="true">
+                        <connection-url>jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE</connection-url>
+                        <driver>h2</driver>
+                        <security>
+                            <user-name>sa</user-name>
+                            <password>sa</password>
+                        </security>
+                    </datasource>
+                    <drivers>
+                        <driver name="h2" module="com.h2database.h2">
+                            <xa-datasource-class>org.h2.jdbcx.JdbcDataSource</xa-datasource-class>
+                        </driver>
+                    </drivers>
+                </datasources>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ee:1.2">
+                <spec-descriptor-property-replacement>false</spec-descriptor-property-replacement>
+                <jboss-descriptor-property-replacement>true</jboss-descriptor-property-replacement>
+                <annotation-property-replacement>false</annotation-property-replacement>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ejb3:1.5">
+                <session-bean>
+                    <stateless>
+                        <bean-instance-pool-ref pool-name="slsb-strict-max-pool"/>
+                    </stateless>
+                    <stateful default-access-timeout="5000" cache-ref="simple"/>
+                    <singleton default-access-timeout="5000"/>
+                </session-bean>
+                <pools>
+                    <bean-instance-pools>
+                        <strict-max-pool name="slsb-strict-max-pool" max-pool-size="20" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                        <strict-max-pool name="mdb-strict-max-pool" max-pool-size="20" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                    </bean-instance-pools>
+                </pools>
+                <caches>
+                    <cache name="simple" aliases="NoPassivationCache"/>
+                    <cache name="passivating" passivation-store-ref="file" aliases="SimpleStatefulCache"/>
+                </caches>
+                <passivation-stores>
+                    <file-passivation-store name="file"/>
+                </passivation-stores>
+                <async thread-pool-name="default"/>
+                <timer-service thread-pool-name="default" default-data-store="default-file-store">
+                    <data-stores>
+                        <file-data-store name="default-file-store" path="timer-service-data" relative-to="jboss.server.data.dir"/>
+                    </data-stores>
+                </timer-service>
+                <remote connector-ref="remoting-connector" thread-pool-name="default"/>
+                <thread-pools>
+                    <thread-pool name="default">
+                        <max-threads count="10"/>
+                        <keepalive-time time="100" unit="milliseconds"/>
+                    </thread-pool>
+                </thread-pools>
+                <default-security-domain value="other"/>
+                <default-missing-method-permissions-deny-access value="true"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:infinispan:1.5">
+                <cache-container name="web" aliases="standard-session-cache" default-cache="local-web" module="org.jboss.as.clustering.web.infinispan">
+                    <local-cache name="local-web" batching="true">
+                        <file-store passivation="false" purge="false"/>
+                    </local-cache>
+                </cache-container>
+                <cache-container name="hibernate" default-cache="local-query" module="org.jboss.as.jpa.hibernate:4">
+                    <local-cache name="entity">
+                        <transaction mode="NON_XA"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000"/>
+                    </local-cache>
+                    <local-cache name="local-query">
+                        <transaction mode="NONE"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000"/>
+                    </local-cache>
+                    <local-cache name="timestamps">
+                        <transaction mode="NONE"/>
+                        <eviction strategy="NONE"/>
+                    </local-cache>
+                </cache-container>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jaxrs:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jca:1.1">
+                <archive-validation enabled="true" fail-on-error="true" fail-on-warn="false"/>
+                <bean-validation enabled="true"/>
+                <default-workmanager>
+                    <short-running-threads>
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </short-running-threads>
+                    <long-running-threads>
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </long-running-threads>
+                </default-workmanager>
+                <cached-connection-manager/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jdr:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jmx:1.3">
+                <expose-resolved-model/>
+                <expose-expression-model/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jpa:1.1">
+                <jpa default-datasource="" default-extended-persistence-inheritance="DEEP"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jsf:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:mail:1.2">
+                <mail-session name="default" jndi-name="java:jboss/mail/Default">
+                    <smtp-server outbound-socket-binding-ref="mail-smtp"/>
+                </mail-session>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:naming:1.4">
+                <remote-naming/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:pojo:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:remoting:1.2">
+                <connector name="remoting-connector" socket-binding="remoting" security-realm="ApplicationRealm"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:resource-adapters:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:sar:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:security:1.2">
+                <security-domains>
+                    <security-domain name="other" cache-type="default">
+                        <authentication>
+                            <login-module code="Remoting" flag="optional">
+                                <module-option name="password-stacking" value="useFirstPass"/>
+                            </login-module>
+                            <login-module code="RealmDirect" flag="required">
+                                <module-option name="password-stacking" value="useFirstPass"/>
+                            </login-module>
+                        </authentication>
+                    </security-domain>
+                    <security-domain name="jboss-web-policy" cache-type="default">
+                        <authorization>
+                            <policy-module code="Delegating" flag="required"/>
+                        </authorization>
+                    </security-domain>
+                    <security-domain name="jboss-ejb-policy" cache-type="default">
+                        <authorization>
+                            <policy-module code="Delegating" flag="required"/>
+                        </authorization>
+                    </security-domain>
+                </security-domains>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:threads:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:transactions:1.5">
+                <core-environment>
+                    <process-id>
+                        <uuid/>
+                    </process-id>
+                </core-environment>
+                <recovery-environment socket-binding="txn-recovery-environment" status-socket-binding="txn-status-manager"/>
+                <coordinator-environment default-timeout="1200"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:web:2.2" default-virtual-server="default-host" native="false">
+                <connector name="http" protocol="HTTP/1.1" scheme="http" socket-binding="http"/>
+                <virtual-server name="default-host" enable-welcome-root="true">
+                    <alias name="localhost"/>
+                    <alias name="example.com"/>
+                </virtual-server>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:webservices:1.2">
+                <modify-wsdl-address>true</modify-wsdl-address>
+                <wsdl-host>${jboss.bind.address:127.0.0.1}</wsdl-host>
+                <endpoint-config name="Standard-Endpoint-Config"/>
+                <endpoint-config name="Recording-Endpoint-Config">
+                    <pre-handler-chain name="recording-handlers" protocol-bindings="##SOAP11_HTTP ##SOAP11_HTTP_MTOM ##SOAP12_HTTP ##SOAP12_HTTP_MTOM">
+                        <handler name="RecordingHandler" class="org.jboss.ws.common.invocation.RecordingServerHandler"/>
+                    </pre-handler-chain>
+                </endpoint-config>
+                <client-config name="Standard-Client-Config"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:weld:1.0"/>
+        </profile>
+        <profile name="ha">
+            <subsystem xmlns="urn:jboss:domain:logging:1.5">
+                <console-handler name="CONSOLE">
+                    <level name="INFO"/>
+                    <formatter>
+                        <named-formatter name="COLOR-PATTERN"/>
+                    </formatter>
+                </console-handler>
+                <periodic-rotating-file-handler name="FILE" autoflush="true">
+                    <formatter>
+                        <named-formatter name="PATTERN"/>
+                    </formatter>
+                    <file relative-to="jboss.server.log.dir" path="server.log"/>
+                    <suffix value=".yyyy-MM-dd"/>
+                    <append value="true"/>
+                </periodic-rotating-file-handler>
+                <logger category="com.arjuna">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="org.apache.tomcat.util.modeler">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="org.jboss.as.config">
+                    <level name="DEBUG"/>
+                </logger>
+                <logger category="sun.rmi">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb.config">
+                    <level name="ERROR"/>
+                </logger>
+                <root-logger>
+                    <level name="INFO"/>
+                    <handlers>
+                        <handler name="CONSOLE"/>
+                        <handler name="FILE"/>
+                    </handlers>
+                </root-logger>
+                <formatter name="PATTERN">
+                    <pattern-formatter pattern="%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+                </formatter>
+                <formatter name="COLOR-PATTERN">
+                    <pattern-formatter pattern="%K{level}%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+                </formatter>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:configadmin:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:datasources:1.2">
+                <datasources>
+                    <datasource jndi-name="java:jboss/datasources/ExampleDS" pool-name="ExampleDS" enabled="true" use-java-context="true">
+                        <connection-url>jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE</connection-url>
+                        <driver>h2</driver>
+                        <security>
+                            <user-name>sa</user-name>
+                            <password>sa</password>
+                        </security>
+                    </datasource>
+                    <drivers>
+                        <driver name="h2" module="com.h2database.h2">
+                            <xa-datasource-class>org.h2.jdbcx.JdbcDataSource</xa-datasource-class>
+                        </driver>
+                    </drivers>
+                </datasources>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ee:1.2">
+                <spec-descriptor-property-replacement>false</spec-descriptor-property-replacement>
+                <jboss-descriptor-property-replacement>true</jboss-descriptor-property-replacement>
+                <annotation-property-replacement>false</annotation-property-replacement>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ejb3:1.5">
+                <session-bean>
+                    <stateless>
+                        <bean-instance-pool-ref pool-name="slsb-strict-max-pool"/>
+                    </stateless>
+                    <stateful default-access-timeout="5000" cache-ref="simple" clustered-cache-ref="clustered"/>
+                    <singleton default-access-timeout="5000"/>
+                </session-bean>
+                <pools>
+                    <bean-instance-pools>
+                        <strict-max-pool name="slsb-strict-max-pool" max-pool-size="20" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                        <strict-max-pool name="mdb-strict-max-pool" max-pool-size="20" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                    </bean-instance-pools>
+                </pools>
+                <caches>
+                    <cache name="simple" aliases="NoPassivationCache"/>
+                    <cache name="passivating" passivation-store-ref="file" aliases="SimpleStatefulCache"/>
+                    <cache name="clustered" passivation-store-ref="infinispan" aliases="StatefulTreeCache"/>
+                </caches>
+                <passivation-stores>
+                    <file-passivation-store name="file"/>
+                    <cluster-passivation-store name="infinispan" cache-container="ejb"/>
+                </passivation-stores>
+                <async thread-pool-name="default"/>
+                <timer-service thread-pool-name="default" default-data-store="default-file-store">
+                    <data-stores>
+                        <file-data-store name="default-file-store" path="timer-service-data" relative-to="jboss.server.data.dir"/>
+                    </data-stores>
+                </timer-service>
+                <remote connector-ref="remoting-connector" thread-pool-name="default"/>
+                <thread-pools>
+                    <thread-pool name="default">
+                        <max-threads count="10"/>
+                        <keepalive-time time="100" unit="milliseconds"/>
+                    </thread-pool>
+                </thread-pools>
+                <default-security-domain value="other"/>
+                <default-missing-method-permissions-deny-access value="true"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:infinispan:1.5">
+                <cache-container name="singleton" aliases="cluster ha-partition" default-cache="default">
+                    <transport lock-timeout="60000"/>
+                    <replicated-cache name="default" mode="SYNC" batching="true">
+                        <locking isolation="REPEATABLE_READ"/>
+                    </replicated-cache>
+                </cache-container>
+                <cache-container name="web" aliases="standard-session-cache" default-cache="repl" module="org.jboss.as.clustering.web.infinispan">
+                    <transport lock-timeout="60000"/>
+                    <replicated-cache name="repl" mode="ASYNC" batching="true">
+                        <file-store/>
+                    </replicated-cache>
+                    <replicated-cache name="sso" mode="SYNC" batching="true"/>
+                    <distributed-cache name="dist" l1-lifespan="0" mode="ASYNC" batching="true">
+                        <file-store/>
+                    </distributed-cache>
+                </cache-container>
+                <cache-container name="ejb" aliases="sfsb sfsb-cache" default-cache="repl" module="org.jboss.as.clustering.ejb3.infinispan">
+                    <transport lock-timeout="60000"/>
+                    <replicated-cache name="repl" mode="ASYNC" batching="true">
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <file-store/>
+                    </replicated-cache>
+                    <replicated-cache name="remote-connector-client-mappings" mode="SYNC" batching="true"/>
+                    <distributed-cache name="dist" l1-lifespan="0" mode="ASYNC" batching="true">
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <file-store/>
+                    </distributed-cache>
+                </cache-container>
+                <cache-container name="hibernate" default-cache="local-query" module="org.jboss.as.jpa.hibernate:4">
+                    <transport lock-timeout="60000"/>
+                    <local-cache name="local-query">
+                        <transaction mode="NONE"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000"/>
+                    </local-cache>
+                    <invalidation-cache name="entity" mode="SYNC">
+                        <transaction mode="NON_XA"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000"/>
+                    </invalidation-cache>
+                    <replicated-cache name="timestamps" mode="ASYNC">
+                        <transaction mode="NONE"/>
+                        <eviction strategy="NONE"/>
+                    </replicated-cache>
+                </cache-container>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jaxrs:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jca:1.1">
+                <archive-validation enabled="true" fail-on-error="true" fail-on-warn="false"/>
+                <bean-validation enabled="true"/>
+                <default-workmanager>
+                    <short-running-threads>
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </short-running-threads>
+                    <long-running-threads>
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </long-running-threads>
+                </default-workmanager>
+                <cached-connection-manager/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jdr:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jgroups:1.1" default-stack="udp">
+                <stack name="udp">
+                    <transport type="UDP" socket-binding="jgroups-udp"/>
+                    <protocol type="PING"/>
+                    <protocol type="MERGE3"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-udp-fd"/>
+                    <protocol type="FD"/>
+                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="pbcast.NAKACK"/>
+                    <protocol type="UNICAST2"/>
+                    <protocol type="pbcast.STABLE"/>
+                    <protocol type="pbcast.GMS"/>
+                    <protocol type="UFC"/>
+                    <protocol type="MFC"/>
+                    <protocol type="FRAG2"/>
+                    <protocol type="RSVP"/>
+                </stack>
+                <stack name="tcp">
+                    <transport type="TCP" socket-binding="jgroups-tcp"/>
+                    <protocol type="MPING" socket-binding="jgroups-mping"/>
+                    <protocol type="MERGE2"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
+                    <protocol type="FD"/>
+                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="pbcast.NAKACK"/>
+                    <protocol type="UNICAST2"/>
+                    <protocol type="pbcast.STABLE"/>
+                    <protocol type="pbcast.GMS"/>
+                    <protocol type="UFC"/>
+                    <protocol type="MFC"/>
+                    <protocol type="FRAG2"/>
+                    <protocol type="RSVP"/>
+                </stack>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jmx:1.3">
+                <expose-resolved-model/>
+                <expose-expression-model/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jpa:1.1">
+                <jpa default-datasource="" default-extended-persistence-inheritance="DEEP"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jsf:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:mail:1.2">
+                <mail-session name="default" jndi-name="java:jboss/mail/Default">
+                    <smtp-server outbound-socket-binding-ref="mail-smtp"/>
+                </mail-session>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:modcluster:1.2">
+                <mod-cluster-config advertise-socket="modcluster" connector="ajp">
+                    <dynamic-load-provider>
+                        <load-metric type="busyness"/>
+                    </dynamic-load-provider>
+                </mod-cluster-config>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:naming:1.4">
+                <remote-naming/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:pojo:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:remoting:1.2">
+                <connector name="remoting-connector" socket-binding="remoting" security-realm="ApplicationRealm"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:resource-adapters:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:sar:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:security:1.2">
+                <security-domains>
+                    <security-domain name="other" cache-type="default">
+                        <authentication>
+                            <login-module code="Remoting" flag="optional">
+                                <module-option name="password-stacking" value="useFirstPass"/>
+                            </login-module>
+                            <login-module code="RealmDirect" flag="required">
+                                <module-option name="password-stacking" value="useFirstPass"/>
+                            </login-module>
+                        </authentication>
+                    </security-domain>
+                    <security-domain name="jboss-web-policy" cache-type="default">
+                        <authorization>
+                            <policy-module code="Delegating" flag="required"/>
+                        </authorization>
+                    </security-domain>
+                    <security-domain name="jboss-ejb-policy" cache-type="default">
+                        <authorization>
+                            <policy-module code="Delegating" flag="required"/>
+                        </authorization>
+                    </security-domain>
+                </security-domains>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:threads:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:transactions:1.5">
+                <core-environment>
+                    <process-id>
+                        <uuid/>
+                    </process-id>
+                </core-environment>
+                <recovery-environment socket-binding="txn-recovery-environment" status-socket-binding="txn-status-manager"/>
+                <coordinator-environment default-timeout="300"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:web:2.2" default-virtual-server="default-host" native="false">
+                <connector name="http" protocol="HTTP/1.1" scheme="http" socket-binding="http"/>
+                <connector name="ajp" protocol="AJP/1.3" scheme="http" socket-binding="ajp"/>
+                <virtual-server name="default-host" enable-welcome-root="true">
+                    <alias name="localhost"/>
+                    <alias name="example.com"/>
+                </virtual-server>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:webservices:1.2">
+                <modify-wsdl-address>true</modify-wsdl-address>
+                <wsdl-host>${jboss.bind.address:127.0.0.1}</wsdl-host>
+                <endpoint-config name="Standard-Endpoint-Config"/>
+                <endpoint-config name="Recording-Endpoint-Config">
+                    <pre-handler-chain name="recording-handlers" protocol-bindings="##SOAP11_HTTP ##SOAP11_HTTP_MTOM ##SOAP12_HTTP ##SOAP12_HTTP_MTOM">
+                        <handler name="RecordingHandler" class="org.jboss.ws.common.invocation.RecordingServerHandler"/>
+                    </pre-handler-chain>
+                </endpoint-config>
+                <client-config name="Standard-Client-Config"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:weld:1.0"/>
+        </profile>
+        <profile name="full">
+            <subsystem xmlns="urn:jboss:domain:logging:1.5">
+                <console-handler name="CONSOLE">
+                    <level name="INFO"/>
+                    <formatter>
+                        <named-formatter name="COLOR-PATTERN"/>
+                    </formatter>
+                </console-handler>
+                <periodic-rotating-file-handler name="FILE" autoflush="true">
+                    <formatter>
+                        <named-formatter name="PATTERN"/>
+                    </formatter>
+                    <file relative-to="jboss.server.log.dir" path="server.log"/>
+                    <suffix value=".yyyy-MM-dd"/>
+                    <append value="true"/>
+                </periodic-rotating-file-handler>
+                <logger category="com.arjuna">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="org.apache.tomcat.util.modeler">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="org.jboss.as.config">
+                    <level name="DEBUG"/>
+                </logger>
+                <logger category="sun.rmi">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb.config">
+                    <level name="ERROR"/>
+                </logger>
+                <root-logger>
+                    <level name="INFO"/>
+                    <handlers>
+                        <handler name="CONSOLE"/>
+                        <handler name="FILE"/>
+                    </handlers>
+                </root-logger>
+                <formatter name="PATTERN">
+                    <pattern-formatter pattern="%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+                </formatter>
+                <formatter name="COLOR-PATTERN">
+                    <pattern-formatter pattern="%K{level}%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+                </formatter>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:cmp:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:configadmin:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:datasources:1.2">
+                <datasources>
+                    <datasource jndi-name="java:jboss/datasources/ExampleDS" pool-name="ExampleDS" enabled="true" use-java-context="true">
+                        <connection-url>jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE</connection-url>
+                        <driver>h2</driver>
+                        <security>
+                            <user-name>sa</user-name>
+                            <password>sa</password>
+                        </security>
+                    </datasource>
+                    <drivers>
+                        <driver name="h2" module="com.h2database.h2">
+                            <xa-datasource-class>org.h2.jdbcx.JdbcDataSource</xa-datasource-class>
+                        </driver>
+                    </drivers>
+                </datasources>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ee:1.2">
+                <spec-descriptor-property-replacement>false</spec-descriptor-property-replacement>
+                <jboss-descriptor-property-replacement>true</jboss-descriptor-property-replacement>
+                <annotation-property-replacement>false</annotation-property-replacement>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ejb3:1.5">
+                <session-bean>
+                    <stateless>
+                        <bean-instance-pool-ref pool-name="slsb-strict-max-pool"/>
+                    </stateless>
+                    <stateful default-access-timeout="5000" cache-ref="simple"/>
+                    <singleton default-access-timeout="5000"/>
+                </session-bean>
+                <mdb>
+                    <resource-adapter-ref resource-adapter-name="${ejb.resource-adapter-name:hornetq-ra}"/>
+                    <bean-instance-pool-ref pool-name="mdb-strict-max-pool"/>
+                </mdb>
+                <pools>
+                    <bean-instance-pools>
+                        <strict-max-pool name="slsb-strict-max-pool" max-pool-size="80" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                        <strict-max-pool name="mdb-strict-max-pool" max-pool-size="80" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                    </bean-instance-pools>
+                </pools>
+                <caches>
+                    <cache name="simple" aliases="NoPassivationCache"/>
+                    <cache name="passivating" passivation-store-ref="file" aliases="SimpleStatefulCache"/>
+                </caches>
+                <passivation-stores>
+                    <file-passivation-store name="file"/>
+                </passivation-stores>
+                <async thread-pool-name="default"/>
+                <timer-service thread-pool-name="default" default-data-store="default-file-store">
+                    <data-stores>
+                        <file-data-store name="default-file-store" path="timer-service-data" relative-to="jboss.server.data.dir"/>
+                    </data-stores>
+                </timer-service>
+                <remote connector-ref="remoting-connector" thread-pool-name="default"/>
+                <thread-pools>
+                    <thread-pool name="default">
+                        <max-threads count="80"/>
+                        <keepalive-time time="100" unit="milliseconds"/>
+                    </thread-pool>
+                </thread-pools>
+                <iiop enable-by-default="false" use-qualified-name="false"/>
+                <default-security-domain value="other"/>
+                <default-missing-method-permissions-deny-access value="true"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:infinispan:1.5">
+                <cache-container name="web" aliases="standard-session-cache" default-cache="local-web" module="org.jboss.as.clustering.web.infinispan">
+                    <local-cache name="local-web" batching="true">
+                        <file-store passivation="false" purge="false"/>
+                    </local-cache>
+                </cache-container>
+                <cache-container name="hibernate" default-cache="local-query" module="org.jboss.as.jpa.hibernate:4">
+                    <local-cache name="entity">
+                        <transaction mode="NON_XA"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000"/>
+                    </local-cache>
+                    <local-cache name="local-query">
+                        <transaction mode="NONE"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000"/>
+                    </local-cache>
+                    <local-cache name="timestamps">
+                        <transaction mode="NONE"/>
+                        <eviction strategy="NONE"/>
+                    </local-cache>
+                </cache-container>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jacorb:1.4">
+                <orb socket-binding="jacorb" ssl-socket-binding="jacorb-ssl">
+                    <initializers security="identity" transactions="spec"/>
+                </orb>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jaxr:1.1">
+                <connection-factory jndi-name="java:jboss/jaxr/ConnectionFactory"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jaxrs:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jca:1.1">
+                <archive-validation enabled="true" fail-on-error="true" fail-on-warn="false"/>
+                <bean-validation enabled="true"/>
+                <default-workmanager>
+                    <short-running-threads>
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </short-running-threads>
+                    <long-running-threads>
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </long-running-threads>
+                </default-workmanager>
+                <cached-connection-manager/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jdr:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jmx:1.3">
+                <expose-resolved-model/>
+                <expose-expression-model/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jpa:1.1">
+                <jpa default-datasource="" default-extended-persistence-inheritance="DEEP"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jsf:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jsr77:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:mail:1.2">
+                <mail-session name="default" jndi-name="java:jboss/mail/Default">
+                    <smtp-server outbound-socket-binding-ref="mail-smtp"/>
+                </mail-session>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:messaging:1.4">
+                <hornetq-server>
+                    <persistence-enabled>true</persistence-enabled>
+                    <journal-type>NIO</journal-type>
+                    <journal-min-files>2</journal-min-files>
+
+                    <connectors>
+                        <netty-connector name="netty" socket-binding="messaging"/>
+                        <netty-connector name="netty-throughput" socket-binding="messaging-throughput">
+                            <param key="batch-delay" value="50"/>
+                        </netty-connector>
+                        <in-vm-connector name="in-vm" server-id="0"/>
+                    </connectors>
+
+                    <acceptors>
+                        <netty-acceptor name="netty" socket-binding="messaging"/>
+                        <netty-acceptor name="netty-throughput" socket-binding="messaging-throughput">
+                            <param key="batch-delay" value="50"/>
+                            <param key="direct-deliver" value="false"/>
+                        </netty-acceptor>
+                        <in-vm-acceptor name="in-vm" server-id="0"/>
+                    </acceptors>
+
+                    <security-settings>
+                        <security-setting match="#">
+                            <permission type="send" roles="guest"/>
+                            <permission type="consume" roles="guest"/>
+                            <permission type="createNonDurableQueue" roles="guest"/>
+                            <permission type="deleteNonDurableQueue" roles="guest"/>
+                        </security-setting>
+                    </security-settings>
+
+                    <address-settings>
+                        <address-setting match="#">
+                            <dead-letter-address>jms.queue.DLQ</dead-letter-address>
+                            <expiry-address>jms.queue.ExpiryQueue</expiry-address>
+                            <redelivery-delay>0</redelivery-delay>
+                            <max-size-bytes>10485760</max-size-bytes>
+                            <page-size-bytes>2097152</page-size-bytes>
+                            <address-full-policy>PAGE</address-full-policy>
+                            <message-counter-history-day-limit>10</message-counter-history-day-limit>
+                        </address-setting>
+                    </address-settings>
+
+                    <jms-connection-factories>
+                        <connection-factory name="InVmConnectionFactory">
+                            <connectors>
+                                <connector-ref connector-name="in-vm"/>
+                            </connectors>
+                            <entries>
+                                <entry name="java:/ConnectionFactory"/>
+                            </entries>
+                        </connection-factory>
+                        <connection-factory name="RemoteConnectionFactory">
+                            <connectors>
+                                <connector-ref connector-name="netty"/>
+                            </connectors>
+                            <entries>
+                                <entry name="java:jboss/exported/jms/RemoteConnectionFactory"/>
+                            </entries>
+                        </connection-factory>
+                        <pooled-connection-factory name="hornetq-ra">
+                            <transaction mode="xa"/>
+                            <connectors>
+                                <connector-ref connector-name="in-vm"/>
+                            </connectors>
+                            <entries>
+                                <entry name="java:/JmsXA"/>
+                            </entries>
+                        </pooled-connection-factory>
+                    </jms-connection-factories>
+
+                    <jms-destinations>
+                        <jms-queue name="ExpiryQueue">
+                            <entry name="java:/jms/queue/ExpiryQueue"/>
+                        </jms-queue>
+                        <jms-queue name="DLQ">
+                            <entry name="java:/jms/queue/DLQ"/>
+                        </jms-queue>
+                    </jms-destinations>
+                </hornetq-server>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:naming:1.4">
+                <remote-naming/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:pojo:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:remoting:1.2">
+                <connector name="remoting-connector" socket-binding="remoting" security-realm="ApplicationRealm"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:resource-adapters:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:sar:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:security:1.2">
+                <security-domains>
+                    <security-domain name="other" cache-type="default">
+                        <authentication>
+                            <login-module code="Remoting" flag="optional">
+                                <module-option name="password-stacking" value="useFirstPass"/>
+                            </login-module>
+                            <login-module code="RealmDirect" flag="required">
+                                <module-option name="password-stacking" value="useFirstPass"/>
+                            </login-module>
+                        </authentication>
+                    </security-domain>
+                    <security-domain name="jboss-web-policy" cache-type="default">
+                        <authorization>
+                            <policy-module code="Delegating" flag="required"/>
+                        </authorization>
+                    </security-domain>
+                    <security-domain name="jboss-ejb-policy" cache-type="default">
+                        <authorization>
+                            <policy-module code="Delegating" flag="required"/>
+                        </authorization>
+                    </security-domain>
+                </security-domains>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:threads:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:transactions:1.5">
+                <core-environment>
+                    <process-id>
+                        <uuid/>
+                    </process-id>
+                </core-environment>
+                <recovery-environment socket-binding="txn-recovery-environment" status-socket-binding="txn-status-manager"/>
+                <coordinator-environment default-timeout="300"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:web:2.2" default-virtual-server="default-host" native="false">
+                <connector name="http" protocol="HTTP/1.1" scheme="http" socket-binding="http"/>
+                <virtual-server name="default-host" enable-welcome-root="true">
+                    <alias name="localhost"/>
+                    <alias name="example.com"/>
+                </virtual-server>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:webservices:1.2">
+                <modify-wsdl-address>true</modify-wsdl-address>
+                <wsdl-host>${jboss.bind.address:127.0.0.1}</wsdl-host>
+                <endpoint-config name="Standard-Endpoint-Config"/>
+                <endpoint-config name="Recording-Endpoint-Config">
+                    <pre-handler-chain name="recording-handlers" protocol-bindings="##SOAP11_HTTP ##SOAP11_HTTP_MTOM ##SOAP12_HTTP ##SOAP12_HTTP_MTOM">
+                        <handler name="RecordingHandler" class="org.jboss.ws.common.invocation.RecordingServerHandler"/>
+                    </pre-handler-chain>
+                </endpoint-config>
+                <client-config name="Standard-Client-Config"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:weld:1.0"/>
+        </profile>
+        <profile name="full-ha">
+            <subsystem xmlns="urn:jboss:domain:logging:1.5">
+                <console-handler name="CONSOLE">
+                    <level name="INFO"/>
+                    <formatter>
+                        <named-formatter name="COLOR-PATTERN"/>
+                    </formatter>
+                </console-handler>
+                <periodic-rotating-file-handler name="FILE" autoflush="true">
+                    <formatter>
+                        <named-formatter name="PATTERN"/>
+                    </formatter>
+                    <file relative-to="jboss.server.log.dir" path="server.log"/>
+                    <suffix value=".yyyy-MM-dd"/>
+                    <append value="true"/>
+                </periodic-rotating-file-handler>
+                <logger category="com.arjuna">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="org.apache.tomcat.util.modeler">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="org.jboss.as.config">
+                    <level name="DEBUG"/>
+                </logger>
+                <logger category="sun.rmi">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb.config">
+                    <level name="ERROR"/>
+                </logger>
+                <root-logger>
+                    <level name="INFO"/>
+                    <handlers>
+                        <handler name="CONSOLE"/>
+                        <handler name="FILE"/>
+                    </handlers>
+                </root-logger>
+                <formatter name="PATTERN">
+                    <pattern-formatter pattern="%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+                </formatter>
+                <formatter name="COLOR-PATTERN">
+                    <pattern-formatter pattern="%K{level}%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+                </formatter>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:cmp:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:configadmin:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:datasources:1.2">
+                <datasources>
+                    <datasource jndi-name="java:jboss/datasources/ExampleDS" pool-name="ExampleDS" enabled="true" use-java-context="true">
+                        <connection-url>jdbc:h2:mem:test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE</connection-url>
+                        <driver>h2</driver>
+                        <security>
+                            <user-name>sa</user-name>
+                            <password>sa</password>
+                        </security>
+                    </datasource>
+                    <drivers>
+                        <driver name="h2" module="com.h2database.h2">
+                            <xa-datasource-class>org.h2.jdbcx.JdbcDataSource</xa-datasource-class>
+                        </driver>
+                    </drivers>
+                </datasources>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ee:1.2">
+                <spec-descriptor-property-replacement>false</spec-descriptor-property-replacement>
+                <jboss-descriptor-property-replacement>true</jboss-descriptor-property-replacement>
+                <annotation-property-replacement>false</annotation-property-replacement>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ejb3:1.5">
+                <session-bean>
+                    <stateless>
+                        <bean-instance-pool-ref pool-name="slsb-strict-max-pool"/>
+                    </stateless>
+                    <stateful default-access-timeout="5000" cache-ref="simple" clustered-cache-ref="clustered"/>
+                    <singleton default-access-timeout="5000"/>
+                </session-bean>
+                <mdb>
+                    <resource-adapter-ref resource-adapter-name="${ejb.resource-adapter-name:hornetq-ra}"/>
+                    <bean-instance-pool-ref pool-name="mdb-strict-max-pool"/>
+                </mdb>
+                <pools>
+                    <bean-instance-pools>
+                        <strict-max-pool name="slsb-strict-max-pool" max-pool-size="20" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                        <strict-max-pool name="mdb-strict-max-pool" max-pool-size="20" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                    </bean-instance-pools>
+                </pools>
+                <caches>
+                    <cache name="simple" aliases="NoPassivationCache"/>
+                    <cache name="passivating" passivation-store-ref="file" aliases="SimpleStatefulCache"/>
+                    <cache name="clustered" passivation-store-ref="infinispan" aliases="StatefulTreeCache"/>
+                </caches>
+                <passivation-stores>
+                    <file-passivation-store name="file"/>
+                    <cluster-passivation-store name="infinispan" cache-container="ejb"/>
+                </passivation-stores>
+                <async thread-pool-name="default"/>
+                <timer-service thread-pool-name="default" default-data-store="default-file-store">
+                    <data-stores>
+                        <file-data-store name="default-file-store" path="timer-service-data" relative-to="jboss.server.data.dir"/>
+                    </data-stores>
+                </timer-service>
+                <remote connector-ref="remoting-connector" thread-pool-name="default"/>
+                <thread-pools>
+                    <thread-pool name="default">
+                        <max-threads count="10"/>
+                        <keepalive-time time="100" unit="milliseconds"/>
+                    </thread-pool>
+                </thread-pools>
+                <iiop enable-by-default="false" use-qualified-name="false"/>
+                <default-security-domain value="other"/>
+                <default-missing-method-permissions-deny-access value="true"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:infinispan:1.5">
+                <cache-container name="singleton" aliases="cluster ha-partition" default-cache="default">
+                    <transport lock-timeout="60000"/>
+                    <replicated-cache name="default" mode="SYNC" batching="true">
+                        <locking isolation="REPEATABLE_READ"/>
+                    </replicated-cache>
+                </cache-container>
+                <cache-container name="web" aliases="standard-session-cache" default-cache="repl" module="org.jboss.as.clustering.web.infinispan">
+                    <transport lock-timeout="60000"/>
+                    <replicated-cache name="repl" mode="ASYNC" batching="true">
+                        <file-store/>
+                    </replicated-cache>
+                    <replicated-cache name="sso" mode="SYNC" batching="true"/>
+                    <distributed-cache name="dist" l1-lifespan="0" mode="ASYNC" batching="true">
+                        <file-store/>
+                    </distributed-cache>
+                </cache-container>
+                <cache-container name="ejb" aliases="sfsb sfsb-cache" default-cache="repl" module="org.jboss.as.clustering.ejb3.infinispan">
+                    <transport lock-timeout="60000"/>
+                    <replicated-cache name="repl" mode="ASYNC" batching="true">
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <file-store/>
+                    </replicated-cache>
+                    <replicated-cache name="remote-connector-client-mappings" mode="SYNC" batching="true"/>
+                    <distributed-cache name="dist" l1-lifespan="0" mode="ASYNC" batching="true">
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <file-store/>
+                    </distributed-cache>
+                </cache-container>
+                <cache-container name="hibernate" default-cache="local-query" module="org.jboss.as.jpa.hibernate:4">
+                    <transport lock-timeout="60000"/>
+                    <local-cache name="local-query">
+                        <transaction mode="NONE"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000"/>
+                    </local-cache>
+                    <invalidation-cache name="entity" mode="SYNC">
+                        <transaction mode="NON_XA"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000"/>
+                    </invalidation-cache>
+                    <replicated-cache name="timestamps" mode="ASYNC">
+                        <transaction mode="NONE"/>
+                        <eviction strategy="NONE"/>
+                    </replicated-cache>
+                </cache-container>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jacorb:1.4">
+                <orb socket-binding="jacorb" ssl-socket-binding="jacorb-ssl">
+                    <initializers security="identity" transactions="spec"/>
+                </orb>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jaxr:1.1">
+                <connection-factory jndi-name="java:jboss/jaxr/ConnectionFactory"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jaxrs:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jca:1.1">
+                <archive-validation enabled="true" fail-on-error="true" fail-on-warn="false"/>
+                <bean-validation enabled="true"/>
+                <default-workmanager>
+                    <short-running-threads>
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </short-running-threads>
+                    <long-running-threads>
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </long-running-threads>
+                </default-workmanager>
+                <cached-connection-manager/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jdr:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jgroups:1.1" default-stack="udp">
+                <stack name="udp">
+                    <transport type="UDP" socket-binding="jgroups-udp"/>
+                    <protocol type="PING"/>
+                    <protocol type="MERGE3"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-udp-fd"/>
+                    <protocol type="FD"/>
+                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="pbcast.NAKACK"/>
+                    <protocol type="UNICAST2"/>
+                    <protocol type="pbcast.STABLE"/>
+                    <protocol type="pbcast.GMS"/>
+                    <protocol type="UFC"/>
+                    <protocol type="MFC"/>
+                    <protocol type="FRAG2"/>
+                    <protocol type="RSVP"/>
+                </stack>
+                <stack name="tcp">
+                    <transport type="TCP" socket-binding="jgroups-tcp"/>
+                    <protocol type="MPING" socket-binding="jgroups-mping"/>
+                    <protocol type="MERGE2"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
+                    <protocol type="FD"/>
+                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="pbcast.NAKACK"/>
+                    <protocol type="UNICAST2"/>
+                    <protocol type="pbcast.STABLE"/>
+                    <protocol type="pbcast.GMS"/>
+                    <protocol type="UFC"/>
+                    <protocol type="MFC"/>
+                    <protocol type="FRAG2"/>
+                    <protocol type="RSVP"/>
+                </stack>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jmx:1.3">
+                <expose-resolved-model/>
+                <expose-expression-model/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jpa:1.1">
+                <jpa default-datasource="" default-extended-persistence-inheritance="DEEP"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jsf:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jsr77:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:mail:1.2">
+                <mail-session name="default" jndi-name="java:jboss/mail/Default">
+                    <smtp-server outbound-socket-binding-ref="mail-smtp"/>
+                </mail-session>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:messaging:1.4">
+                <hornetq-server>
+                    <persistence-enabled>true</persistence-enabled>
+                    <cluster-password>${jboss.messaging.cluster.password:CHANGE ME!!}</cluster-password>
+                    <journal-type>NIO</journal-type>
+                    <journal-min-files>2</journal-min-files>
+
+                    <connectors>
+                        <netty-connector name="netty" socket-binding="messaging"/>
+                        <netty-connector name="netty-throughput" socket-binding="messaging-throughput">
+                            <param key="batch-delay" value="50"/>
+                        </netty-connector>
+                        <in-vm-connector name="in-vm" server-id="0"/>
+                    </connectors>
+
+                    <acceptors>
+                        <netty-acceptor name="netty" socket-binding="messaging"/>
+                        <netty-acceptor name="netty-throughput" socket-binding="messaging-throughput">
+                            <param key="batch-delay" value="50"/>
+                            <param key="direct-deliver" value="false"/>
+                        </netty-acceptor>
+                        <in-vm-acceptor name="in-vm" server-id="0"/>
+                    </acceptors>
+
+                    <broadcast-groups>
+                        <broadcast-group name="bg-group1">
+                            <socket-binding>messaging-group</socket-binding>
+                            <broadcast-period>5000</broadcast-period>
+                            <connector-ref>
+                                netty
+                            </connector-ref>
+                        </broadcast-group>
+                    </broadcast-groups>
+
+                    <discovery-groups>
+                        <discovery-group name="dg-group1">
+                            <socket-binding>messaging-group</socket-binding>
+                            <refresh-timeout>10000</refresh-timeout>
+                        </discovery-group>
+                    </discovery-groups>
+
+                    <cluster-connections>
+                        <cluster-connection name="my-cluster">
+                            <address>jms</address>
+                            <connector-ref>netty</connector-ref>
+                            <discovery-group-ref discovery-group-name="dg-group1"/>
+                        </cluster-connection>
+                    </cluster-connections>
+
+                    <security-settings>
+                        <security-setting match="#">
+                            <permission type="send" roles="guest"/>
+                            <permission type="consume" roles="guest"/>
+                            <permission type="createNonDurableQueue" roles="guest"/>
+                            <permission type="deleteNonDurableQueue" roles="guest"/>
+                        </security-setting>
+                    </security-settings>
+
+                    <address-settings>
+                        <address-setting match="#">
+                            <dead-letter-address>jms.queue.DLQ</dead-letter-address>
+                            <expiry-address>jms.queue.ExpiryQueue</expiry-address>
+                            <redelivery-delay>0</redelivery-delay>
+                            <max-size-bytes>10485760</max-size-bytes>
+                            <page-size-bytes>2097152</page-size-bytes>
+                            <address-full-policy>PAGE</address-full-policy>
+                            <message-counter-history-day-limit>10</message-counter-history-day-limit>
+                            <redistribution-delay>1000</redistribution-delay>
+                        </address-setting>
+                    </address-settings>
+
+                    <jms-connection-factories>
+                        <connection-factory name="InVmConnectionFactory">
+                            <connectors>
+                                <connector-ref connector-name="in-vm"/>
+                            </connectors>
+                            <entries>
+                                <entry name="java:/ConnectionFactory"/>
+                            </entries>
+                        </connection-factory>
+                        <connection-factory name="RemoteConnectionFactory">
+                            <connectors>
+                                <connector-ref connector-name="netty"/>
+                            </connectors>
+                            <entries>
+                                <entry name="java:jboss/exported/jms/RemoteConnectionFactory"/>
+                            </entries>
+                            <ha>true</ha>
+                            <block-on-acknowledge>true</block-on-acknowledge>
+                            <retry-interval>1000</retry-interval>
+                            <retry-interval-multiplier>1.0</retry-interval-multiplier>
+                            <reconnect-attempts>-1</reconnect-attempts>
+                        </connection-factory>
+                        <pooled-connection-factory name="hornetq-ra">
+                            <transaction mode="xa"/>
+                            <connectors>
+                                <connector-ref connector-name="in-vm"/>
+                            </connectors>
+                            <entries>
+                                <entry name="java:/JmsXA"/>
+                            </entries>
+                        </pooled-connection-factory>
+                    </jms-connection-factories>
+
+                    <jms-destinations>
+                        <jms-queue name="ExpiryQueue">
+                            <entry name="java:/jms/queue/ExpiryQueue"/>
+                        </jms-queue>
+                        <jms-queue name="DLQ">
+                            <entry name="java:/jms/queue/DLQ"/>
+                        </jms-queue>
+                    </jms-destinations>
+                </hornetq-server>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:modcluster:1.2">
+                <mod-cluster-config advertise-socket="modcluster" connector="ajp">
+                    <dynamic-load-provider>
+                        <load-metric type="busyness"/>
+                    </dynamic-load-provider>
+                </mod-cluster-config>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:naming:1.4">
+                <remote-naming/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:pojo:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:remoting:1.2">
+                <connector name="remoting-connector" socket-binding="remoting" security-realm="ApplicationRealm"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:resource-adapters:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:sar:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:security:1.2">
+                <security-domains>
+                    <security-domain name="other" cache-type="default">
+                        <authentication>
+                            <login-module code="Remoting" flag="optional">
+                                <module-option name="password-stacking" value="useFirstPass"/>
+                            </login-module>
+                            <login-module code="RealmDirect" flag="required">
+                                <module-option name="password-stacking" value="useFirstPass"/>
+                            </login-module>
+                        </authentication>
+                    </security-domain>
+                    <security-domain name="jboss-web-policy" cache-type="default">
+                        <authorization>
+                            <policy-module code="Delegating" flag="required"/>
+                        </authorization>
+                    </security-domain>
+                    <security-domain name="jboss-ejb-policy" cache-type="default">
+                        <authorization>
+                            <policy-module code="Delegating" flag="required"/>
+                        </authorization>
+                    </security-domain>
+                </security-domains>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:threads:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:transactions:1.5">
+                <core-environment>
+                    <process-id>
+                        <uuid/>
+                    </process-id>
+                </core-environment>
+                <recovery-environment socket-binding="txn-recovery-environment" status-socket-binding="txn-status-manager"/>
+                <coordinator-environment default-timeout="300"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:web:2.2" default-virtual-server="default-host" native="false">
+                <connector name="http" protocol="HTTP/1.1" scheme="http" socket-binding="http"/>
+                <connector name="ajp" protocol="AJP/1.3" scheme="http" socket-binding="ajp"/>
+                <virtual-server name="default-host" enable-welcome-root="true">
+                    <alias name="localhost"/>
+                    <alias name="example.com"/>
+                </virtual-server>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:webservices:1.2">
+                <modify-wsdl-address>true</modify-wsdl-address>
+                <wsdl-host>${jboss.bind.address:127.0.0.1}</wsdl-host>
+                <endpoint-config name="Standard-Endpoint-Config"/>
+                <endpoint-config name="Recording-Endpoint-Config">
+                    <pre-handler-chain name="recording-handlers" protocol-bindings="##SOAP11_HTTP ##SOAP11_HTTP_MTOM ##SOAP12_HTTP ##SOAP12_HTTP_MTOM">
+                        <handler name="RecordingHandler" class="org.jboss.ws.common.invocation.RecordingServerHandler"/>
+                    </pre-handler-chain>
+                </endpoint-config>
+                <client-config name="Standard-Client-Config"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:weld:1.0"/>
+        </profile>
+        <profile name="full-ha-siefi">
+            <subsystem xmlns="urn:jboss:domain:logging:1.5">
+                <async-handler name="ASYNC">
+                    <queue-length value="1000"/>
+                    <overflow-action value="discard"/>
+                </async-handler>
+                <periodic-rotating-file-handler name="FILE" autoflush="true">
+                    <level name="INFO"/>
+                    <formatter>
+                        <pattern-formatter pattern="%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+                    </formatter>
+                    <file relative-to="jboss.server.log.dir" path="server.log"/>
+                    <suffix value=".yyyy-MM-dd"/>
+                    <append value="true"/>
+                </periodic-rotating-file-handler>
+                <size-rotating-file-handler name="FILE_SERVER">
+                    <level name="INFO"/>
+                    <formatter>
+                        <pattern-formatter pattern="%d%-5p(%t)%s%E%n"/>
+                    </formatter>
+                    <file relative-to="jboss.server.log.dir" path="server.log"/>
+                    <rotate-size value="50m"/>
+                    <max-backup-index value="5"/>
+                </size-rotating-file-handler>
+                <size-rotating-file-handler name="FILE_SIEFI">
+                    <level name="INFO"/>
+                    <formatter>
+                        <pattern-formatter pattern="%d%-5p(%t)%s%E%n"/>
+                    </formatter>
+                    <file relative-to="jboss.server.log.dir" path="siefi.log"/>
+                    <rotate-size value="80m"/>
+                    <max-backup-index value="8"/>
+                </size-rotating-file-handler>
+                <syslog-handler name="GRAYLOG">
+                    <level name="INFO"/>
+                    <server-address value="logs.des.extra.caixa.gov.br"/>
+                    <hostname value="${jboss.server.name}"/>
+                    <port value="514"/>
+                    <app-name value="SIEFI"/>
+                    <formatter>
+                        <syslog-format syslog-type="RFC5424"/>
+                    </formatter>
+                    <facility value="user-level"/>
+                </syslog-handler>
+                <logger category="com.arjuna" use-parent-handlers="true">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="org.apache.tomcat.util.modeler" use-parent-handlers="true">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="sun.rmi" use-parent-handlers="true">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb" use-parent-handlers="true">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb.config" use-parent-handlers="true">
+                    <level name="ERROR"/>
+                </logger>
+                <logger category="br.gov.caixa.siefi" use-parent-handlers="false">
+                    <level name="INFO"/>
+                    <handlers>
+                        <handler name="FILE_SIEFI"/>
+                        <handler name="GRAYLOG"/>
+                        <handler name="FILE_SERVER"/>
+                    </handlers>
+                </logger>
+                <logger category="stdout">
+                    <level name="OFF"/>
+                </logger>
+                <logger category="stderr">
+                    <level name="OFF"/>
+                </logger>
+                <root-logger>
+                    <level name="INFO"/>
+                    <handlers>
+                        <handler name="FILE_SERVER"/>
+                        <handler name="GRAYLOG"/>
+                    </handlers>
+                </root-logger>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:cmp:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:configadmin:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:datasources:1.2">
+                <datasources>
+                    <datasource jta="true" jndi-name="java:/jdbc/OracleSiefiDS" pool-name="jdbc/OracleSiefiDS" enabled="true" use-ccm="false">
+                        <connection-url>jdbc:oracle:thin:@cnpexdadvm01-scan4.extra.caixa.gov.br:1521/orad01ng</connection-url>
+                        <driver-class>oracle.jdbc.OracleDriver</driver-class>
+                        <driver>ojdbc6.jar</driver>
+                        <pool>
+                            <min-pool-size>1</min-pool-size>
+                            <max-pool-size>50</max-pool-size>
+                        </pool>
+                        <security>
+                            <user-name>SPCEFID1</user-name>
+                            <password>pwspcefid1</password>
+                        </security>
+                        <validation>
+                            <validate-on-match>false</validate-on-match>
+                            <background-validation>false</background-validation>
+                        </validation>
+                        <timeout>
+                            <set-tx-query-timeout>true</set-tx-query-timeout>
+                            <blocking-timeout-millis>0</blocking-timeout-millis>
+                            <idle-timeout-minutes>10</idle-timeout-minutes>
+                            <query-timeout>5</query-timeout>
+                            <use-try-lock>0</use-try-lock>
+                            <allocation-retry>0</allocation-retry>
+                            <allocation-retry-wait-millis>0</allocation-retry-wait-millis>
+                        </timeout>
+                        <statement>
+                            <share-prepared-statements>false</share-prepared-statements>
+                        </statement>
+                    </datasource>
+                </datasources>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ee:1.2">
+                <spec-descriptor-property-replacement>false</spec-descriptor-property-replacement>
+                <jboss-descriptor-property-replacement>true</jboss-descriptor-property-replacement>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ejb3:1.5">
+                <session-bean>
+                    <stateless>
+                        <bean-instance-pool-ref pool-name="slsb-strict-max-pool"/>
+                    </stateless>
+                    <stateful default-access-timeout="5000" cache-ref="simple" clustered-cache-ref="clustered"/>
+                    <singleton default-access-timeout="5000"/>
+                </session-bean>
+                <mdb>
+                    <bean-instance-pool-ref pool-name="mdb-strict-max-pool"/>
+                </mdb>
+                <pools>
+                    <bean-instance-pools>
+                        <strict-max-pool name="slsb-strict-max-pool" max-pool-size="20" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                        <strict-max-pool name="mdb-strict-max-pool" max-pool-size="20" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                    </bean-instance-pools>
+                </pools>
+                <caches>
+                    <cache name="simple" aliases="NoPassivationCache"/>
+                    <cache name="passivating" passivation-store-ref="file" aliases="SimpleStatefulCache"/>
+                </caches>
+                <passivation-stores>
+                    <file-passivation-store name="file" idle-timeout="300" idle-timeout-unit="SECONDS" max-size="10000" relative-to="jboss.server.data.dir" groups-path="ejb3/groups" sessions-path="ejb3/sessions" subdirectory-count="100"/>
+                    <cluster-passivation-store name="infinispan" idle-timeout="300" idle-timeout-unit="SECONDS" max-size="10000" cache-container="ejb" client-mappings-cache="remote-connector-client-mappings" passivate-events-on-replicate="true"/>
+                </passivation-stores>
+                <async thread-pool-name="default"/>
+                <timer-service thread-pool-name="default" default-data-store="default-file-store">
+                    <data-stores>
+                        <file-data-store name="default-file-store" path="timer-service-data" relative-to="jboss.server.data.dir"/>
+                    </data-stores>
+                </timer-service>
+                <remote connector-ref="remoting-connector" thread-pool-name="default"/>
+                <thread-pools>
+                    <thread-pool name="default">
+                        <max-threads count="10"/>
+                        <keepalive-time time="100" unit="milliseconds"/>
+                    </thread-pool>
+                </thread-pools>
+                <iiop enable-by-default="false" use-qualified-name="false"/>
+                <in-vm-remote-interface-invocation pass-by-value="true"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:infinispan:1.5">
+                <cache-container name="web" aliases="standard-session-cache" default-cache="repl" module="org.jboss.as.clustering.web.infinispan">
+                    <transport lock-timeout="60000"/>
+                    <replicated-cache name="repl" mode="ASYNC" batching="true">
+                        <file-store/>
+                    </replicated-cache>
+                    <replicated-cache name="sso" mode="SYNC" batching="true"/>
+                    <distributed-cache name="dist" l1-lifespan="0" mode="ASYNC" batching="true">
+                        <file-store/>
+                    </distributed-cache>
+                </cache-container>
+                <cache-container name="hibernate" default-cache="local-query" module="org.jboss.as.jpa.hibernate:4">
+                    <local-cache name="entity">
+                        <transaction mode="NON_XA"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000"/>
+                    </local-cache>
+                    <local-cache name="local-query">
+                        <transaction mode="NONE"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000"/>
+                    </local-cache>
+                    <local-cache name="timestamps">
+                        <transaction mode="NONE"/>
+                        <eviction strategy="NONE"/>
+                    </local-cache>
+                </cache-container>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jacorb:1.4">
+                <orb name="JBoss" print-version="off" use-imr="off" use-bom="off" cache-typecodes="off" cache-poa-names="off" giop-minor-version="2" socket-binding="jacorb" ssl-socket-binding="jacorb-ssl">
+                    <connection retries="5" retry-interval="500" client-timeout="0" server-timeout="0" max-server-connections="2147483647" max-managed-buf-size="24" outbuf-size="2048" outbuf-cache-timeout="-1"/>
+                    <initializers security="identity" transactions="spec"/>
+                </orb>
+                <poa monitoring="off" queue-wait="off" queue-min="10" queue-max="100">
+                    <request-processors pool-size="5" max-threads="32"/>
+                </poa>
+                <naming root-context="JBoss/Naming/root" export-corbaloc="on"/>
+                <interop sun="on" comet="off" iona="off" chunk-custom-rmi-valuetypes="on" lax-boolean-encoding="off" indirection-encoding-disable="off" strict-check-on-tc-creation="off"/>
+                <security support-ssl="off" add-component-via-interceptor="on" client-supports="MutualAuth" client-requires="None" server-supports="MutualAuth" server-requires="None"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jaxr:1.1">
+                <connection-factory jndi-name="java:jboss/jaxr/ConnectionFactory"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jaxrs:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jca:1.1">
+                <archive-validation enabled="true" fail-on-error="true" fail-on-warn="false"/>
+                <bean-validation enabled="true"/>
+                <default-workmanager>
+                    <long-running-threads allow-core-timeout="false">
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </long-running-threads>
+                    <short-running-threads allow-core-timeout="false">
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </short-running-threads>
+                </default-workmanager>
+                <cached-connection-manager debug="false" error="false"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jdr:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jgroups:1.1" default-stack="udp">
+                <stack name="udp">
+                    <transport type="UDP" shared="true" socket-binding="jgroups-udp"/>
+                    <protocol type="PING"/>
+                    <protocol type="MERGE3"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-udp-fd"/>
+                    <protocol type="FD"/>
+                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="BARRIER"/>
+                    <protocol type="pbcast.NAKACK"/>
+                    <protocol type="UNICAST2"/>
+                    <protocol type="pbcast.STABLE"/>
+                    <protocol type="pbcast.GMS"/>
+                    <protocol type="UFC"/>
+                    <protocol type="MFC"/>
+                    <protocol type="FRAG2"/>
+                    <protocol type="RSVP"/>
+                </stack>
+                <stack name="tcp">
+                    <transport type="TCP" shared="true" socket-binding="jgroups-tcp"/>
+                    <protocol type="MPING" socket-binding="jgroups-mping"/>
+                    <protocol type="MERGE2"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
+                    <protocol type="FD"/>
+                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="BARRIER"/>
+                    <protocol type="pbcast.NAKACK"/>
+                    <protocol type="UNICAST2"/>
+                    <protocol type="pbcast.STABLE"/>
+                    <protocol type="pbcast.GMS"/>
+                    <protocol type="UFC"/>
+                    <protocol type="MFC"/>
+                    <protocol type="FRAG2"/>
+                    <protocol type="RSVP"/>
+                </stack>
+                <stack name="tcpping">
+                    <transport type="TCP" shared="true" socket-binding="jgroups-tcp"/>
+                    <protocol type="TCPPING">
+                        <property name="initial_hosts">
+                            HostA[7600],HostB[7600]
+                        </property>
+                        <property name="port_range">
+                            0
+                        </property>
+                        <property name="timeout">
+                            3000
+                        </property>
+                        <property name="num_initial_members">
+                            3
+                        </property>
+                    </protocol>
+                    <protocol type="MERGE2"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
+                    <protocol type="FD"/>
+                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="BARRIER"/>
+                    <protocol type="pbcast.NAKACK"/>
+                    <protocol type="UNICAST2"/>
+                    <protocol type="pbcast.STABLE"/>
+                    <protocol type="pbcast.GMS"/>
+                    <protocol type="UFC"/>
+                    <protocol type="MFC"/>
+                    <protocol type="FRAG2"/>
+                    <protocol type="RSVP"/>
+                </stack>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jmx:1.3"/>
+            <subsystem xmlns="urn:jboss:domain:jpa:1.1">
+                <jpa default-datasource=""/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jsr77:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:mail:1.2">
+                <mail-session name="java:jboss/mail/Default" jndi-name="java:jboss/mail/Default">
+                    <smtp-server outbound-socket-binding-ref="mail-smtp"/>
+                </mail-session>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:modcluster:1.2">
+                <mod-cluster-config advertise-socket="modcluster" proxy-list="10.116.84.136:6666,10.116.84.137:6666" proxy-url="/" balancer="mycluster_siefi" advertise="true" excluded-contexts="ROOT,invoker,jbossws,juddi,console" auto-enable-contexts="true" stop-context-timeout="10" socket-timeout="20" sticky-session="true" sticky-session-remove="false" sticky-session-force="false" worker-timeout="-1" max-attempts="1" flush-packets="false" flush-wait="-1" ping="10" smax="-1" ttl="-1" node-timeout="-1" connector="ajp">
+                    <dynamic-load-provider history="9" decay="2">
+                        <load-metric type="busyness"/>
+                    </dynamic-load-provider>
+                </mod-cluster-config>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:naming:1.4">
+                <remote-naming/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jsf:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:pojo:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:remoting:1.2">
+                <connector name="remoting-connector" socket-binding="remoting" security-realm="ApplicationRealm"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:resource-adapters:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:sar:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:security:1.2">
+                <security-management deep-copy-subject-mode="false"/>
+                <security-domains>
+                    <security-domain name="other" cache-type="default">
+                        <authentication>
+                            <login-module code="Remoting" flag="optional">
+                                <module-option name="password-stacking" value="useFirstPass"/>
+                            </login-module>
+                            <login-module code="RealmDirect" flag="required">
+                                <module-option name="password-stacking" value="useFirstPass"/>
+                            </login-module>
+                        </authentication>
+                    </security-domain>
+                    <security-domain name="jboss-web-policy" cache-type="default">
+                        <authorization>
+                            <policy-module code="Delegating" flag="required"/>
+                        </authorization>
+                    </security-domain>
+                    <security-domain name="jboss-ejb-policy" cache-type="default">
+                        <authorization>
+                            <policy-module code="Delegating" flag="required"/>
+                        </authorization>
+                    </security-domain>
+                    <security-domain name="keycloak">
+                        <authentication>
+                            <login-module code="org.keycloak.adapters.jboss.KeycloakLoginModule" flag="required"/>
+                        </authentication>
+                    </security-domain>
+                    <security-domain name="jaas-siefi" cache-type="default">
+                        <authentication>
+                            <login-module code="org.jboss.security.auth.spi.LdapExtLoginModule" flag="required">
+                                <module-option name="baseCtxDN" value="ou=People,o=caixa"/>
+                                <module-option name="baseFilter" value="(uid={0})"/>
+                                <module-option name="java.naming.provider.url" value="ldap://ldapclusterdes.extra.caixa.gov.br:1489"/>
+                                <module-option name="java.naming.security.authentication" value="simple"/>
+                                <module-option name="roleAttributeID" value="cn"/>
+                                <module-option name="roleAttributeIsDN" value="true"/>
+                                <module-option name="roleFilter" value="(uniqueMember=uid={0},ou=People,o=caixa)"/>
+                                <module-option name="roleNameAttributeID" value="cn"/>
+                                <module-option name="rolesCtxDN" value="cn=SIEFI,ou=Groups,o=caixa"/>
+                                <module-option name="searchScope" value="SUBTREE_SCOPE"/>
+                            </login-module>
+                        </authentication>
+                    </security-domain>
+                </security-domains>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:threads:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:transactions:1.5">
+                <core-environment node-identifier="1" path="var" relative-to="jboss.server.data.dir">
+                    <process-id>
+                        <uuid/>
+                    </process-id>
+                </core-environment>
+                <recovery-environment socket-binding="txn-recovery-environment" status-socket-binding="txn-status-manager"/>
+                <coordinator-environment default-timeout="300"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:web:2.2" default-virtual-server="default-host" native="false">
+                <connector name="http" protocol="HTTP/1.1" scheme="http" socket-binding="http"/>
+                <connector name="ajp" protocol="AJP/1.3" scheme="http" socket-binding="ajp"/>
+                <virtual-server name="default-host" enable-welcome-root="true">
+                    <alias name="localhost"/>
+                    <alias name="example.com"/>
+                    <sso cache-container="web" cache-name="sso" domain="desenvolvimento.extracaixa" reauthenticate="false"/>
+                </virtual-server>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:keycloak:1.1">
+                <secure-deployment name="siefi-web.war">
+                    <realm>intranet</realm>
+                    <resource>cli-web-efi</resource>
+                    <auth-server-url>https://login.des.caixa/auth</auth-server-url>
+                    <ssl-required>external</ssl-required>
+                    <credential name="secret">49c37829-2637-4f7f-b1f8-835fd50fe08d</credential>
+                </secure-deployment>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:webservices:1.2">
+                <modify-wsdl-address>true</modify-wsdl-address>
+                <wsdl-host>${jboss.bind.address:127.0.0.1}</wsdl-host>
+                <endpoint-config name="Standard-Endpoint-Config"/>
+                <endpoint-config name="Recording-Endpoint-Config">
+                    <pre-handler-chain name="recording-handlers" protocol-bindings="##SOAP11_HTTP ##SOAP11_HTTP_MTOM ##SOAP12_HTTP ##SOAP12_HTTP_MTOM">
+                        <handler name="RecordingHandler" class="org.jboss.ws.common.invocation.RecordingServerHandler"/>
+                    </pre-handler-chain>
+                </endpoint-config>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:weld:1.0"/>
+        </profile>
+        <profile name="full-ha-simph">
+            <subsystem xmlns="urn:jboss:domain:logging:1.5">
+                <async-handler name="ASYNC">
+                    <queue-length value="1000"/>
+                    <overflow-action value="discard"/>
+                </async-handler>
+                <periodic-rotating-file-handler name="FILE" autoflush="true">
+                    <level name="INFO"/>
+                    <formatter>
+                        <pattern-formatter pattern="%d{HH:mm:ss,SSS} %-5p [%c] (%t) %s%E%n"/>
+                    </formatter>
+                    <file relative-to="jboss.server.log.dir" path="server.log"/>
+                    <suffix value=".yyyy-MM-dd"/>
+                    <append value="true"/>
+                </periodic-rotating-file-handler>
+                <periodic-rotating-file-handler name="simph">
+                    <level name="INFO"/>
+                    <file relative-to="jboss.server.log.dir" path="simph.log"/>
+                    <suffix value=".yyyy-MM-dd"/>
+                </periodic-rotating-file-handler>
+                <size-rotating-file-handler name="FILE_SERVER">
+                    <level name="INFO"/>
+                    <formatter>
+                        <pattern-formatter pattern="%d%-5p(%t)%s%E%n"/>
+                    </formatter>
+                    <file relative-to="jboss.server.log.dir" path="server.log"/>
+                    <rotate-size value="50m"/>
+                    <max-backup-index value="5"/>
+                </size-rotating-file-handler>
+                <size-rotating-file-handler name="FILE_simph">
+                    <level name="DEBUG"/>
+                    <formatter>
+                        <pattern-formatter pattern="%d%-5p(%t)%s%E%n"/>
+                    </formatter>
+                    <file relative-to="jboss.server.log.dir" path="simph.log"/>
+                    <rotate-size value="80m"/>
+                    <max-backup-index value="8"/>
+                </size-rotating-file-handler>
+                <syslog-handler name="GRAYLOG">
+                    <level name="INFO"/>
+                    <server-address value="logs.des.extra.caixa.gov.br"/>
+                    <hostname value="${jboss.server.name}"/>
+                    <port value="514"/>
+                    <app-name value="simph"/>
+                    <formatter>
+                        <syslog-format syslog-type="RFC5424"/>
+                    </formatter>
+                    <facility value="user-level"/>
+                </syslog-handler>
+                <logger category="com.arjuna" use-parent-handlers="true">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="org.apache.tomcat.util.modeler" use-parent-handlers="true">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="sun.rmi" use-parent-handlers="true">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb" use-parent-handlers="true">
+                    <level name="WARN"/>
+                </logger>
+                <logger category="jacorb.config" use-parent-handlers="true">
+                    <level name="ERROR"/>
+                </logger>
+                <logger category="br.gov.caixa.simph" use-parent-handlers="false">
+                    <level name="DEBUG"/>
+                    <handlers>
+                        <handler name="simph"/>
+                        <handler name="FILE_SIMPH"/>
+                        <handler name="GRAYLOG"/>
+                    </handlers>
+                </logger>
+                <logger category="stdout">
+                    <level name="OFF"/>
+                </logger>
+                <logger category="stderr">
+                    <level name="OFF"/>
+                </logger>
+                <logger category="br.gov.caixa" use-parent-handlers="false">
+                    <level name="DEBUG"/>
+                    <handlers>
+                        <handler name="simph"/>
+                        <handler name="FILE_SIMPH"/>
+                        <handler name="GRAYLOG"/>
+                    </handlers>
+                </logger>
+                <root-logger>
+                    <level name="INFO"/>
+                    <handlers>
+                        <handler name="FILE_SERVER"/>
+                        <handler name="GRAYLOG"/>
+                    </handlers>
+                </root-logger>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:cmp:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:configadmin:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:datasources:1.2">
+                <datasources/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ee:1.2">
+                <spec-descriptor-property-replacement>false</spec-descriptor-property-replacement>
+                <jboss-descriptor-property-replacement>true</jboss-descriptor-property-replacement>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:ejb3:1.5">
+                <session-bean>
+                    <stateless>
+                        <bean-instance-pool-ref pool-name="slsb-strict-max-pool"/>
+                    </stateless>
+                    <stateful default-access-timeout="5000" cache-ref="simple" clustered-cache-ref="clustered"/>
+                    <singleton default-access-timeout="5000"/>
+                </session-bean>
+                <mdb>
+                    <bean-instance-pool-ref pool-name="mdb-strict-max-pool"/>
+                </mdb>
+                <pools>
+                    <bean-instance-pools>
+                        <strict-max-pool name="slsb-strict-max-pool" max-pool-size="20" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                        <strict-max-pool name="mdb-strict-max-pool" max-pool-size="20" instance-acquisition-timeout="5" instance-acquisition-timeout-unit="MINUTES"/>
+                    </bean-instance-pools>
+                </pools>
+                <caches>
+                    <cache name="simple" aliases="NoPassivationCache"/>
+                    <cache name="passivating" passivation-store-ref="file" aliases="SimpleStatefulCache"/>
+                    <cache name="clustered" passivation-store-ref="infinispan" aliases="StatefulTreeCache"/>
+                </caches>
+                <passivation-stores>
+                    <file-passivation-store name="file" idle-timeout="300" idle-timeout-unit="SECONDS" max-size="10000" relative-to="jboss.server.data.dir" groups-path="ejb3/groups" sessions-path="ejb3/sessions" subdirectory-count="100"/>
+                    <cluster-passivation-store name="infinispan" idle-timeout="300" idle-timeout-unit="SECONDS" max-size="10000" cache-container="ejb" client-mappings-cache="remote-connector-client-mappings" passivate-events-on-replicate="true"/>
+                </passivation-stores>
+                <async thread-pool-name="default"/>
+                <timer-service thread-pool-name="default" default-data-store="default-file-store">
+                    <data-stores>
+                        <file-data-store name="default-file-store" path="timer-service-data" relative-to="jboss.server.data.dir"/>
+                    </data-stores>
+                </timer-service>
+                <remote connector-ref="remoting-connector" thread-pool-name="default"/>
+                <thread-pools>
+                    <thread-pool name="default">
+                        <max-threads count="10"/>
+                        <keepalive-time time="100" unit="milliseconds"/>
+                    </thread-pool>
+                </thread-pools>
+                <iiop enable-by-default="false" use-qualified-name="false"/>
+                <in-vm-remote-interface-invocation pass-by-value="true"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:infinispan:1.5">
+                <cache-container name="cluster" aliases="ha-partition" default-cache="default" statistics-enabled="true">
+                    <transport lock-timeout="60000"/>
+                    <replicated-cache name="default" mode="SYNC" batching="true" statistics-enabled="true">
+                        <locking isolation="REPEATABLE_READ" striping="false" acquire-timeout="15000" concurrency-level="1000"/>
+                    </replicated-cache>
+                </cache-container>
+                <cache-container name="web" aliases="standard-session-cache" default-cache="repl" module="org.jboss.as.clustering.web.infinispan" statistics-enabled="true">
+                    <transport lock-timeout="60000"/>
+                    <replicated-cache name="repl" mode="ASYNC" batching="true" statistics-enabled="true">
+                        <file-store relative-to="jboss.server.data.dir" shared="false" preload="false" passivation="true" fetch-state="true" purge="true" singleton="false"/>
+                    </replicated-cache>
+                    <replicated-cache name="sso" mode="SYNC" batching="true" statistics-enabled="true"/>
+                    <distributed-cache name="dist" l1-lifespan="0" mode="ASYNC" batching="true" statistics-enabled="true">
+                        <file-store relative-to="jboss.server.data.dir" shared="false" preload="false" passivation="true" fetch-state="true" purge="true" singleton="false"/>
+                    </distributed-cache>
+                </cache-container>
+                <cache-container name="ejb" aliases="sfsb sfsb-cache" default-cache="repl" module="org.jboss.as.clustering.ejb3.infinispan" statistics-enabled="true">
+                    <transport lock-timeout="60000"/>
+                    <replicated-cache name="repl" mode="ASYNC" batching="true" statistics-enabled="true">
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <file-store relative-to="jboss.server.data.dir" shared="false" preload="false" passivation="true" fetch-state="true" purge="true" singleton="false"/>
+                    </replicated-cache>
+                    <replicated-cache name="remote-connector-client-mappings" mode="SYNC" batching="true" statistics-enabled="true"/>
+                    <distributed-cache name="dist" l1-lifespan="0" mode="ASYNC" batching="true" statistics-enabled="true">
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <file-store relative-to="jboss.server.data.dir" shared="false" preload="false" passivation="true" fetch-state="true" purge="true" singleton="false"/>
+                    </distributed-cache>
+                </cache-container>
+                <cache-container name="hibernate" default-cache="local-query" module="org.jboss.as.jpa.hibernate:4" statistics-enabled="true">
+                    <transport lock-timeout="60000"/>
+                    <local-cache name="local-query" statistics-enabled="true">
+                        <transaction stop-timeout="30000" mode="NONE" locking="OPTIMISTIC"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000" lifespan="-1" interval="60000"/>
+                    </local-cache>
+                    <invalidation-cache name="entity" mode="SYNC" statistics-enabled="true">
+                        <transaction stop-timeout="30000" mode="NON_XA" locking="OPTIMISTIC"/>
+                        <eviction strategy="LRU" max-entries="10000"/>
+                        <expiration max-idle="100000" lifespan="-1" interval="60000"/>
+                    </invalidation-cache>
+                    <replicated-cache name="timestamps" mode="ASYNC" statistics-enabled="true">
+                        <transaction stop-timeout="30000" mode="NONE" locking="OPTIMISTIC"/>
+                        <eviction strategy="NONE" max-entries="-1"/>
+                    </replicated-cache>
+                </cache-container>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jacorb:1.4">
+                <orb name="JBoss" print-version="off" use-imr="off" use-bom="off" cache-typecodes="off" cache-poa-names="off" giop-minor-version="2" socket-binding="jacorb" ssl-socket-binding="jacorb-ssl">
+                    <connection retries="5" retry-interval="500" client-timeout="0" server-timeout="0" max-server-connections="2147483647" max-managed-buf-size="24" outbuf-size="2048" outbuf-cache-timeout="-1"/>
+                    <initializers security="identity" transactions="spec"/>
+                </orb>
+                <poa monitoring="off" queue-wait="off" queue-min="10" queue-max="100">
+                    <request-processors pool-size="5" max-threads="32"/>
+                </poa>
+                <naming root-context="JBoss/Naming/root" export-corbaloc="on"/>
+                <interop sun="on" comet="off" iona="off" chunk-custom-rmi-valuetypes="on" lax-boolean-encoding="off" indirection-encoding-disable="off" strict-check-on-tc-creation="off"/>
+                <security support-ssl="off" add-component-via-interceptor="on" client-supports="MutualAuth" client-requires="None" server-supports="MutualAuth" server-requires="None"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jaxr:1.1">
+                <connection-factory jndi-name="java:jboss/jaxr/ConnectionFactory"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jaxrs:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jca:1.1">
+                <archive-validation enabled="true" fail-on-error="true" fail-on-warn="false"/>
+                <bean-validation enabled="true"/>
+                <default-workmanager>
+                    <long-running-threads allow-core-timeout="false">
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </long-running-threads>
+                    <short-running-threads allow-core-timeout="false">
+                        <core-threads count="50"/>
+                        <queue-length count="50"/>
+                        <max-threads count="50"/>
+                        <keepalive-time time="10" unit="seconds"/>
+                    </short-running-threads>
+                </default-workmanager>
+                <cached-connection-manager debug="false" error="false"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jdr:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:jgroups:1.1" default-stack="udp">
+                <stack name="udp">
+                    <transport type="UDP" shared="true" socket-binding="jgroups-udp"/>
+                    <protocol type="PING"/>
+                    <protocol type="MERGE3"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-udp-fd"/>
+                    <protocol type="FD"/>
+                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="BARRIER"/>
+                    <protocol type="pbcast.NAKACK"/>
+                    <protocol type="UNICAST2"/>
+                    <protocol type="pbcast.STABLE"/>
+                    <protocol type="pbcast.GMS"/>
+                    <protocol type="UFC"/>
+                    <protocol type="MFC"/>
+                    <protocol type="FRAG2"/>
+                    <protocol type="RSVP"/>
+                </stack>
+                <stack name="tcp">
+                    <transport type="TCP" shared="true" socket-binding="jgroups-tcp"/>
+                    <protocol type="MPING" socket-binding="jgroups-mping"/>
+                    <protocol type="MERGE2"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
+                    <protocol type="FD"/>
+                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="BARRIER"/>
+                    <protocol type="pbcast.NAKACK"/>
+                    <protocol type="UNICAST2"/>
+                    <protocol type="pbcast.STABLE"/>
+                    <protocol type="pbcast.GMS"/>
+                    <protocol type="UFC"/>
+                    <protocol type="MFC"/>
+                    <protocol type="FRAG2"/>
+                    <protocol type="RSVP"/>
+                </stack>
+                <stack name="tcpping">
+                    <transport type="TCP" shared="true" socket-binding="jgroups-tcp"/>
+                    <protocol type="TCPPING">
+                        <property name="initial_hosts">
+                            HostA[7600],HostB[7600]
+                        </property>
+                        <property name="port_range">
+                            0
+                        </property>
+                        <property name="timeout">
+                            3000
+                        </property>
+                        <property name="num_initial_members">
+                            3
+                        </property>
+                    </protocol>
+                    <protocol type="MERGE2"/>
+                    <protocol type="FD_SOCK" socket-binding="jgroups-tcp-fd"/>
+                    <protocol type="FD"/>
+                    <protocol type="VERIFY_SUSPECT"/>
+                    <protocol type="BARRIER"/>
+                    <protocol type="pbcast.NAKACK"/>
+                    <protocol type="UNICAST2"/>
+                    <protocol type="pbcast.STABLE"/>
+                    <protocol type="pbcast.GMS"/>
+                    <protocol type="UFC"/>
+                    <protocol type="MFC"/>
+                    <protocol type="FRAG2"/>
+                    <protocol type="RSVP"/>
+                </stack>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jmx:1.3"/>
+            <subsystem xmlns="urn:jboss:domain:jpa:1.1">
+                <jpa default-datasource=""/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jsr77:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:mail:1.2">
+                <mail-session name="java:jboss/mail/Default" jndi-name="java:jboss/mail/Default">
+                    <smtp-server outbound-socket-binding-ref="mail-smtp"/>
+                </mail-session>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:modcluster:1.2">
+                <mod-cluster-config advertise-socket="modcluster" proxy-list="10.116.84.136:6666,10.116.84.137:6666" proxy-url="/" balancer="des_simph" advertise="true" excluded-contexts="ROOT,invoker,jbossws,juddi,console" auto-enable-contexts="true" stop-context-timeout="10" socket-timeout="20" sticky-session="true" sticky-session-remove="false" sticky-session-force="false" worker-timeout="-1" max-attempts="1" flush-packets="false" flush-wait="-1" ping="10" smax="-1" ttl="-1" node-timeout="-1" connector="ajp">
+                    <dynamic-load-provider history="9" decay="2">
+                        <load-metric type="busyness"/>
+                    </dynamic-load-provider>
+                </mod-cluster-config>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:naming:1.4">
+                <remote-naming/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:jsf:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:pojo:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:remoting:1.2">
+                <connector name="remoting-connector" socket-binding="remoting" security-realm="ApplicationRealm"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:resource-adapters:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:sar:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:security:1.2">
+                <security-domains>
+                    <security-domain name="keycloak">
+                        <authentication>
+                            <login-module code="org.keycloak.adapters.jboss.KeycloakLoginModule" flag="required"/>
+                        </authentication>
+                    </security-domain>
+                </security-domains>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:threads:1.1"/>
+            <subsystem xmlns="urn:jboss:domain:transactions:1.5">
+                <core-environment node-identifier="1" path="var" relative-to="jboss.server.data.dir">
+                    <process-id>
+                        <uuid/>
+                    </process-id>
+                </core-environment>
+                <recovery-environment socket-binding="txn-recovery-environment" status-socket-binding="txn-status-manager"/>
+                <coordinator-environment default-timeout="300"/>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:web:2.2" default-virtual-server="default-host" native="false">
+                <connector name="http" protocol="HTTP/1.1" scheme="http" socket-binding="http"/>
+                <connector name="ajp" protocol="AJP/1.3" scheme="http" socket-binding="ajp"/>
+                <virtual-server name="default-host" enable-welcome-root="true">
+                    <alias name="localhost"/>
+                    <alias name="example.com"/>
+                    <sso cache-container="web" cache-name="sso" domain="desenvolvimento.extracaixa" reauthenticate="false"/>
+                </virtual-server>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:webservices:1.2">
+                <modify-wsdl-address>true</modify-wsdl-address>
+                <wsdl-host>${jboss.bind.address:127.0.0.1}</wsdl-host>
+                <endpoint-config name="Standard-Endpoint-Config"/>
+                <endpoint-config name="Recording-Endpoint-Config">
+                    <pre-handler-chain name="recording-handlers" protocol-bindings="##SOAP11_HTTP ##SOAP11_HTTP_MTOM ##SOAP12_HTTP ##SOAP12_HTTP_MTOM">
+                        <handler name="RecordingHandler" class="org.jboss.ws.common.invocation.RecordingServerHandler"/>
+                    </pre-handler-chain>
+                </endpoint-config>
+            </subsystem>
+            <subsystem xmlns="urn:jboss:domain:weld:1.0"/>
+            <subsystem xmlns="urn:jboss:domain:keycloak:1.1">
+                <secure-deployment name="simph-web.war">
+                    <realm>r_inter_auth_basic</realm>
+                    <resource>cli-web-mph</resource>
+                    <auth-server-url>https://logindes.caixa.gov.br/auth</auth-server-url>
+                    <ssl-required>external</ssl-required>
+                    <expose-token>true</expose-token>
+                    <credential name="secret">5aa694b3-7e54-41bd-b563-48d4a814a183</credential>
+                </secure-deployment>
+            </subsystem>
+        </profile>
+    </profiles>
+
+    <interfaces>
+        <interface name="management"/>
+        <interface name="public"/>
+        <interface name="unsecure"/>
+    </interfaces>
+
+   
+    <deployments>
+        <deployment name="wmq.jmsra.rar" runtime-name="wmq.jmsra.rar">
+            <content sha1="73f3f95d33993f968113d1ff268860bbbc737daa"/>
+        </deployment>
+        <deployment name="framework_sisgd-1.0.0" runtime-name="framework_sisgd.jar">
+            <content sha1="bfa824f3ca914695126601fbf6077f22f55d730a"/>
+        </deployment>
+        <deployment name="SIOTP" runtime-name="siotp_1.0.20.ear">
+            <content sha1="18509fb520b425a85c9977eb093fc25ac2364cb5"/>
+        </deployment>
+        <deployment name="jconn4.jar" runtime-name="jconn4.jar">
+            <content sha1="c143e9ab1933bcceba152a0eb6dec8f1d8bf3f82"/>
+        </deployment>
+        <deployment name="ojdbc6.jar" runtime-name="ojdbc6.jar">
+            <content sha1="8d98e89385dafc7e1b8a2cfc1e016deb21246236"/>
+        </deployment>
+        <deployment name="sipag_des.ear" runtime-name="sipag_des.ear">
+            <content sha1="8374eede8392099a29c2136f61bea889564de5f8"/>
+        </deployment>
+        <deployment name="SIFEC-GARANTIAS" runtime-name="garantias-1.8.1-b185.ear">
+            <content sha1="96a5b3eba64960f2456babb9934a8565e1d489a0"/>
+        </deployment>
+        <deployment name="siico.ear" runtime-name="siico.ear">
+            <content sha1="823cf2eb27f3eaed63ef27f933ffe1e0c1c631b4"/>
+        </deployment>
+        <deployment name="sisgdinternet.ear" runtime-name="sisgdinternet.ear">
+            <content sha1="ee6a7d48dd30a04f391095f9baa265755d25f9af"/>
+        </deployment>
+        <deployment name="postgresql-9.0-801.jdbc4.jar" runtime-name="postgresql-9.0-801.jdbc4.jar">
+            <content sha1="153f2f92a786f12fc111d0111f709012df87c808"/>
+        </deployment>
+        <deployment name="conppwextratorjb.ear" runtime-name="conppwextratorjb.ear">
+            <content sha1="fe374f3e657ece158afa482931c0f92217118197"/>
+        </deployment>
+        <deployment name="framework-2.0.1-des.jar" runtime-name="framework.jar">
+            <content sha1="327b14bb2ae78b2e50e8499609324c3a31afb532"/>
+        </deployment>
+        <deployment name="SINAF-VALIDADOR" runtime-name="sinaf_validador_ds200.ear">
+            <content sha1="d0163ef1ca6c5f0f2c0e668d1a4cde2517bc7b52"/>
+        </deployment>
+        <deployment name="guia.ear" runtime-name="guia.ear">
+            <content sha1="d01016288cd45d11ae0fcdc8c8e941109befa31c"/>
+        </deployment>
+        <deployment name="wmq.jmsra-7.0.1.12-transaction.rar" runtime-name="wmq.jmsra-7.0.1.12.rar">
+            <content sha1="17b4541b14d7ea8bc36155c88fcab9d9f95cab7d"/>
+        </deployment>
+        <deployment name="SQLSERVER-sqljdbc4.jar" runtime-name="SQLSERVER-sqljdbc4.jar">
+            <content sha1="ecc4bc5c567954cdd1acd3c5985555c8d0355bb0"/>
+        </deployment>
+        <deployment name="sitah_pmcmv_V1.0.8.8.ear" runtime-name="sitah_mcmv.ear">
+            <content sha1="947b5a538577a794a3c6c755bf05cdd4db016755"/>
+        </deployment>
+        <deployment name="SIGCT" runtime-name="sigct-3.10.0.1-3.10.0.1-b4.ear">
+            <content sha1="be8a935d467f8364a29f0f7a4177efe5087fb1a9"/>
+        </deployment>
+        <deployment name="conppwservice.ear" runtime-name="conppwservice.ear">
+            <content sha1="d3f5e6bcb2e984b1ebb16f7c2b2323b8733b234b"/>
+        </deployment>
+        <deployment name="consoleppware.ear" runtime-name="consoleppware.ear">
+            <content sha1="61458d45c988610f29de48d3b4eafd823d54ea18"/>
+        </deployment>
+        <deployment name="SISRS" runtime-name="sisrs.ear">
+            <content sha1="b7d33d3b62048803ca7232ad0aba4e7b2e48ae5a"/>
+        </deployment>
+        <deployment name="SIGRR_vTMP-JBOSS_EAP.9.ear" runtime-name="SIGRR_vTMP-JBOSS_EAP.9.ear">
+            <content sha1="7fceaedc20eb2d7f703c9cafb161606634102fda"/>
+        </deployment>
+        <deployment name="SIAFC" runtime-name="siafc-1.0.123-b7.ear">
+            <content sha1="b48b32f99a7f53eb5ad629cdc97a03b2eac04958"/>
+        </deployment>
+        <deployment name="SIPGE" runtime-name="SIPGE_ReferencialTecnico_20170314.ear">
+            <content sha1="0ee0496887281d37e3942ae37fda3bc18ae9b920"/>
+        </deployment>
+        <deployment name="SITAH-MON" runtime-name="sitah-mon-V1.0.1.1.76.ear">
+            <content sha1="cf73a6a3fe5a2b76f3d2aee63823ffd5999ad0c6"/>
+        </deployment>
+        <deployment name="SIGCR" runtime-name="bei010caixa.ear">
+            <content sha1="992285d1754ef85752f884fd54a4f2fa05819b54"/>
+        </deployment>
+        <deployment name="SIGDF" runtime-name="sigdf_02012018_1715.ear">
+            <content sha1="215a4779a4d131e3f1b5798ea00f5729b1ef37b0"/>
+        </deployment>
+        <deployment name="SIECM-PRE-DES" runtime-name="siecm-preteste.ear">
+            <content sha1="6bd8b9070f244db0dea8ec2561c77db1cb74305f"/>
+        </deployment>
+        <deployment name="SIPMC-INTRANET" runtime-name="sipmc-intranet-1.001.1.10.027-b70.ear">
+            <content sha1="2eba3305f17a3a3e28a9d882a72a4f2dd7ae81d6"/>
+        </deployment>
+        <deployment name="wmq.jmsra-7.5.0.8.rar" runtime-name="wmq.jmsra-7.5.0.8.rar">
+            <content sha1="700a8c108ce1914d7e6aa8e7fc1b7af132e3dd7a"/>
+        </deployment>
+        <deployment name="SIAOI" runtime-name="siaoi.ear">
+            <content sha1="cb6e569aa33839475fb15c497820493b94634c55"/>
+        </deployment>
+        <deployment name="SIWIC" runtime-name="siwic.ear">
+            <content sha1="1f5aa86082f4485b3f34582122e5f9c242f4cae1"/>
+        </deployment>
+        <deployment name="SIGDR" runtime-name="sigdr.ear">
+            <content sha1="09eb6cb9e535bf234b6842fa5b8d6c12262dc766"/>
+        </deployment>
+        <deployment name="SIPMC-INTERNET" runtime-name="sipmc_internet_ear_1.001.1.11.029.ear">
+            <content sha1="b98a6fc2be2875497fdba2264506fa93dd3ecdc1"/>
+        </deployment>
+        <deployment name="SIEVJ" runtime-name="sievj.ear">
+            <content sha1="7da31411a750447f7b7b6d83bd966659df043b81"/>
+        </deployment>
+        <deployment name="SIGTC" runtime-name="gtc-1.0.0.0-b56.ear">
+            <content sha1="628116f4fd5a2d03914f8aa81f3accba16897608"/>
+        </deployment>
+        <deployment name="SIFEC-EMP-MGE" runtime-name="mge-1.0.0-b14.ear">
+            <content sha1="44456d89f22e36b25da4818b87ba6797b3be9c1d"/>
+        </deployment>
+        <deployment name="SICCR-TRIBUTOS" runtime-name="sifec-tributos-1.1.0-b7.ear">
+            <content sha1="2a9f38e1d05afad4436516046f0f0517e5cecabe"/>
+        </deployment>
+        <deployment name="SIVEP" runtime-name="sivep-0.0.1-b20.ear">
+            <content sha1="ce4061886d4963ef91749590d9f59217d49d45b1"/>
+        </deployment>
+        <deployment name="SIPLD-TESTE" runtime-name="sipld-1.1.0.1.0-b3.ear">
+            <content sha1="91afd56cc1cf5d17f95cb4ca6aba89b78144bf2a"/>
+        </deployment>
+        <deployment name="SIPON" runtime-name="SIPON.ear">
+            <content sha1="0e205ea217892823872d67ae79f9f4701eab0f94"/>
+        </deployment>
+        <deployment name="SICCR-MINUTAS" runtime-name="sifec-minutaGarantias-1.0.0-b36.ear">
+            <content sha1="2af5ff8e20f6eb56c58c05025255611e654137fe"/>
+        </deployment>
+        <deployment name="SICDU-CONVENIO-INTERNET" runtime-name="sicdu-conveniado.ear">
+            <content sha1="fff1d298d06eb05acf39208a6bc35d001b4db16a"/>
+        </deployment>
+        <deployment name="SICDU-CONVENIO-INTRANET" runtime-name="sicdu-conveniado.ear">
+            <content sha1="fff1d298d06eb05acf39208a6bc35d001b4db16a"/>
+        </deployment>
+        <deployment name="SICDU-CLIENTE-INTRANET" runtime-name="sicdu-cliente.ear">
+            <content sha1="6128aad818e51c49250dfc2499916231e7de3147"/>
+        </deployment>
+        <deployment name="SIFEC-IR" runtime-name="sifec-ir-1.3.0.1-b36.ear">
+            <content sha1="ae25bf4b198219b63ea584917969f84c9dc4f3be"/>
+        </deployment>
+        <deployment name="SIGCH" runtime-name="SIGCH_V1.0.2.0.21.ear">
+            <content sha1="ab7fd2bd5dbd914dff9c6acc43bca18f24d520dd"/>
+        </deployment>
+        <deployment name="SIFEC-INTERNET-EMP" runtime-name="emp-3.2.3-b3.ear">
+            <content sha1="2c8faf07d4baff36867b9e481abad58c57d27bbf"/>
+        </deployment>
+        <deployment name="SICCR-BDCAIXA" runtime-name="sifec-bdcaixa-2.0.1-b39.ear">
+            <content sha1="da6702b6e61d54160dea19a5d70a3bbac1683f7e"/>
+        </deployment>
+        <deployment name="SIOPI-JDBC-SYBASE-jconn3.jar" runtime-name="SIOPI-JDBC-SYBASE-jconn3.jar">
+            <content sha1="9e321ff76377778d09b2bce1ebdec7bfbabff601"/>
+        </deployment>
+        <deployment name="SIRUR2" runtime-name="sifec-sirur-0.5.0.1-0.5.0.1-b231.ear">
+            <content sha1="45cae9906e0dc7ac8758ead0dd3008f16429f2bf"/>
+        </deployment>
+        <deployment name="SICCR-DOCUMENTOS3" runtime-name="SIFEC-MANTERDOCUMENTO-2.2.7-b88.ear">
+            <content sha1="1519f7ade6b108e986ce482b51f7ce8f0c85478c"/>
+        </deployment>
+        <deployment name="SIBAN-CONSTRUCARD" runtime-name="construcard-ma-1.0.0-b5.ear">
+            <content sha1="3d5a2325fd5bc8d07fc0e4cea09b8192c91f3bae"/>
+        </deployment>
+        <deployment name="SICCR-DOCUMENTOS" runtime-name="SIFEC-MANTERDOCUMENTO-2.2.7-b91.ear">
+            <content sha1="10b4960d10c5962106c977b5607fa2b7b83b505f"/>
+        </deployment>
+        <deployment name="SIEMP-EMPRESAS" runtime-name="empresas-1.2.3-b15.ear">
+            <content sha1="9ff1ee1af4f46d3086bab2841c249e852e0f52b3"/>
+        </deployment>
+        <deployment name="SIPRC" runtime-name="SIPRC_Build.ear">
+            <content sha1="239afcecd175b7637cfe3218051e28f5d42f4764"/>
+        </deployment>
+        <deployment name="SICCR-DOCUMENTOS2" runtime-name="SIFEC-MANTERDOCUMENTO-2.2.7-b94.ear">
+            <content sha1="3741098ad1bc22528976ae8c96a386125f51203f"/>
+        </deployment>
+        <deployment name="ojdbc6-11.2.0.4.0.jar" runtime-name="ojdbc6-11.2.0.4.0.jar">
+            <content sha1="a483a046eee2f404d864a6ff5b09dc0e1be3fe6c"/>
+        </deployment>
+        <deployment name="SIAPX_JavaWeb" runtime-name="sifec-apx-1.7.9.4-b40.ear">
+            <content sha1="c203914b73892314dd2a3bdd24f754351a1600e5"/>
+        </deployment>
+        <deployment name="SIRIC" runtime-name="ric-web-2.0.3.4-b61.ear">
+            <content sha1="ac6da86019b0fafc6c2e9e131142a2bd9a6927eb"/>
+        </deployment>
+        <deployment name="SIARA" runtime-name="siara-1.2.1.3-b11.ear">
+            <content sha1="5d9bc936ecb0b69c84f24ef89ff505096c7b14ab"/>
+        </deployment>
+        <deployment name="SIFEC-NOVOEX" runtime-name="sifec-novoex-0.0.0.1-b32.ear">
+            <content sha1="9996327642464f81ae62b8833c93f1785cd99557"/>
+        </deployment>
+        <deployment name="SIFEC-BNDES-ONLINE" runtime-name="sifec-bndes-1.1.0-b8.ear">
+            <content sha1="ad4b1d032133709466127eaa056fa4ea1e83d007"/>
+        </deployment>
+        <deployment name="SIPLD-NARQ" runtime-name="sipld-nvarq-3.42.0.1-b25.ear">
+            <content sha1="d92b596dfccb0a9416c8a4a1abd553c182b24e0f"/>
+        </deployment>
+        <deployment name="SICCR-INTEGRACAO" runtime-name="componente-calculo-web-1.0.0-b74.war">
+            <content sha1="5d45567745cfea8ca4db39b22cfabd594c3cdf62"/>
+        </deployment>
+        <deployment name="SIBAN-MCM" runtime-name="mcm-1.0.0.24-b19.ear">
+            <content sha1="2345d299e8b774a8737b1f1fb62da682e32c4637"/>
+        </deployment>
+        <deployment name="SIFEC-BATCH" runtime-name="fec-2.47.0.0-b2.ear">
+            <content sha1="275f488f75cf94063309eee1b57aecea89e51396"/>
+        </deployment>
+        <deployment name="SICCR-PARAMETROS3" runtime-name="sifec-ccr-parametros-1.2.0-b107.ear">
+            <content sha1="0d46b90891ff8cc5a70a5d731d3cb05bb70c364b"/>
+        </deployment>
+        <deployment name="SISDU" runtime-name="sisdu-0.0.0.1-0.0.0.1-b1.ear">
+            <content sha1="af34722751a7f47595f3bf1e007b5156a20a4861"/>
+        </deployment>
+        <deployment name="SIFEC-API" runtime-name="fec-2.50.0.0-b6.ear">
+            <content sha1="37918944a1d1077ea1a36ca02f7aa7f3f0b9669f"/>
+        </deployment>
+        <deployment name="SIFEC-ORIGINACAO3" runtime-name="sifec-originacao-3.11.0-b273.ear">
+            <content sha1="bf257ce3731cc5dc5057a06421ac45a4a7646ba9"/>
+        </deployment>
+        <deployment name="SIFEC-MINUTAS-FRONT" runtime-name="gerenciador-minutas-web-1.0.0-b14.ear">
+            <content sha1="e1ce2a1b85f8d456e6d2ae4f17d18c317983f375"/>
+        </deployment>
+        <deployment name="SIFEC-MINUTA-API2" runtime-name="gerenciador-minutas-api-1.0.0-b97.ear">
+            <content sha1="3f5e374f392f6ed3df0a1e0e6fc6799139b90298"/>
+        </deployment>
+        <deployment name="SIFEC-GARANTIAS2" runtime-name="garantias-1.6.3-b154.ear">
+            <content sha1="7f0af4033a593b3da14d8c8f7a9b5710c20f6b9c"/>
+        </deployment>
+        <deployment name="SIFEC-ORIGINACAO" runtime-name="sifec-originacao-3.11.0-b291.ear">
+            <content sha1="8ed7a36e92b30f686141627afeaaef73d56b2a75"/>
+        </deployment>
+        <deployment name="postgresql-42.2.22.jre7.jar" runtime-name="postgresql-42.2.22.jre7.jar">
+            <content sha1="06a1a7e0a603232f25d57413b1bef4b5a1d62687"/>
+        </deployment>
+        <deployment name="SIFEC-INTEGRACAO3" runtime-name="componente-1.0.0-b348.ear">
+            <content sha1="9d524b05db3f5f3caee4e08a44a667d11007073d"/>
+        </deployment>
+        <deployment name="SILCR" runtime-name="silcr-1.19.0-b152.ear">
+            <content sha1="cbc57faa6dfe5cff6975c6a9139bb4d9337db539"/>
+        </deployment>
+        <deployment name="SIFEC-CCR-API" runtime-name="originacao-api-parent-1.0.0-b9.ear">
+            <content sha1="00af5f237cfb74c389e959e1c280e1c9d24ea58e"/>
+        </deployment>
+        <deployment name="SICCR-PJ-INTERNET" runtime-name="sifec-ccr-pj-5.8.0.1-b71.ear">
+            <content sha1="9cc436c8a5bd37f6b92d159b28a0690e27f5d025"/>
+        </deployment>
+        <deployment name="SIARC" runtime-name="siarc_EAP6.ear">
+            <content sha1="20fc9721ebb2c8563e113ec232ee03b4ade48826"/>
+        </deployment>
+        <deployment name="idmsjdbc.jar" runtime-name="idmsjdbc.jar">
+            <content sha1="46e321fe814cd66a6a494cef922123c06f1bfe32"/>
+        </deployment>
+        <deployment name="SIFEC-PEN" runtime-name="pen-1.1.0.4-b25.ear">
+            <content sha1="13f040da5195a2439fb0a8b3f9b0dd367601e170"/>
+        </deployment>
+        <deployment name="SIFEC-GARANTIAS3" runtime-name="garantias-1.8.0.2-b178.ear">
+            <content sha1="b0c0cfeacbb96dead7bfb69b81147b58903b5b7e"/>
+        </deployment>
+        <deployment name="SIFEC-GARANTIAS4" runtime-name="garantias-1.8.0.3-b183.ear">
+            <content sha1="ec522e28bee026800ab468da116e59d093f57928"/>
+        </deployment>
+        <deployment name="SIFEC-GARANTIAS5" runtime-name="garantias-1.8.0.3-b183.ear">
+            <content sha1="ec532e28bee026800ab468da116e59d093f57928"/>
+        </deployment>
+        <deployment name="postgresql-42.2.23.jre7.jar" runtime-name="postgresql-42.2.23.jre7.jar">
+            <content sha1="2b9342eb6a3e931994463a21181049f8870fd7ed"/>
+        </deployment>
+        <deployment name="SIGEC-COMERCIAL" runtime-name="com-1.0.41.4-b86.ear">
+            <content sha1="cf2abb4d899cbf0376447bf342be0fb4ec40631a"/>
+        </deployment>
+        <deployment name="SINAFWEB" runtime-name="sinaf3.ear">
+            <content sha1="41407f48af7d31c8ff0f7f9f99c61d6ed090ebc0"/>
+        </deployment>
+        <deployment name="postgresql-9.1-901-1.jdbc4.jar" runtime-name="postgresql-9.1-901-1.jdbc4.jar">
+            <content sha1="9bfabe48876ec38f6cbaa6931bad05c64a9ea942"/>
+        </deployment>
+        <deployment name="postgresql-9.4-1201-jdbc4.jar" runtime-name="postgresql-9.4-1201-jdbc4.jar">
+            <content sha1="7f7a680f2aa8fe5d511c5cf5f78fa3a297a8e52b"/>
+        </deployment>
+        <deployment name="SIRUR-INTERNET" runtime-name="sifec-sirur-3.5.10.1-b187.ear">
+            <content sha1="a41da34fb86e9c5a8b71071e6bc622f56fc64728"/>
+        </deployment>
+        <deployment name="SINAF2-PRD-LEGADO" runtime-name="sinaf-1.68.043-b25.ear">
+            <content sha1="8f4cad3130ec85f7a54d5a4a93f11747c110115f"/>
+        </deployment>
+        <deployment name="SIFEC-INTEGRACAO4" runtime-name="componente-dataprev-web-1.0.0-b385.war">
+            <content sha1="35d1cda8468915c7944a9c3c6b2f3ab91e64924a"/>
+        </deployment>
+        <deployment name="SIFEC-FBN4" runtime-name="sifec-fbn-1.0.1.0-b84.ear">
+            <content sha1="d1105bbddba3a4aab5661f6a3b8569e1de72362f"/>
+        </deployment>
+        <deployment name="SICCR-HUB-FRONTEND4" runtime-name="hub-web-1.2.2-b327.ear">
+            <content sha1="55a9186b04f1a8b52a097faec115f3756ac7f985"/>
+        </deployment>
+        <deployment name="SIRCL" runtime-name="sircl.war">
+            <content sha1="2a420ad54c30869c671856d709103dbaebbc2b30"/>
+        </deployment>
+        <deployment name="SIRUR" runtime-name="sifec-sirur-2.9.3-b928.ear">
+            <content sha1="32ee4d3b99bfc2d69b6ebdc713648b6ef3bada06"/>
+        </deployment>
+        <deployment name="SICVE-API" runtime-name="sicve-1.0-1.0-b1.ear">
+            <content sha1="9b89ad7b1c010c6f98240de6f8d2e0c2ae083d04"/>
+        </deployment>
+        <deployment name="SICCR-HUB-FRONTEND3" runtime-name="hub-web-1.3.1-b334.ear">
+            <content sha1="02c9d8508158efe99451e031bb1390a85dedd2a7"/>
+        </deployment>
+        <deployment name="idmsjdbc-17.1.4.0.jar" runtime-name="idmsjdbc-17.1.4.0.jar">
+            <content sha1="4847ef1b02d7cce55460029bfe5641a00c75ce6c"/>
+        </deployment>
+        <deployment name="SIFEC-BAN4" runtime-name="sifec-ban-1.2.1-b42.ear">
+            <content sha1="16611dfcf5f2079af4a425506172375df10f1699"/>
+        </deployment>
+        <deployment name="SICCR-HUB-BACKEND3" runtime-name="hub-api-2.0.0-b482.ear">
+            <content sha1="39b11cc5031f11e3a636dbe759362e11a9a54454"/>
+        </deployment>
+        <deployment name="SICCR-HUB-BACKEND" runtime-name="hub-api-1.5.0-b483.ear">
+            <content sha1="6d222735958f4bf9f8b66ccc24bc930688504680"/>
+        </deployment>
+        <deployment name="SICCR-HUB-FRONTEND" runtime-name="hub-web-1.4.0-b338.ear">
+            <content sha1="e3f79dd6fff8fa67ab04037200b647b31da4bb37"/>
+        </deployment>
+        <deployment name="SICDT-FEC4" runtime-name="sifec-cdt-3.7.0-b547.ear">
+            <content sha1="177274c5d95a23b20853dfa4e59e21c21d19a169"/>
+        </deployment>
+        <deployment name="SICCR-HUB-FRONTEND2" runtime-name="hub-web-1.4.0-b340.ear">
+            <content sha1="5fb0e2f8cee5d65723e9b4a1220351f93989e08c"/>
+        </deployment>
+        <deployment name="SIAPC" runtime-name="siapc-01.03.01.02-b64.ear">
+            <content sha1="4f440b19c24420c22924f0d659b99570d607d845"/>
+        </deployment>
+        <deployment name="SIOUV" runtime-name="siouv-5.13.00.21-b37.ear">
+            <content sha1="35db0624b6ffb0f19cf2bdaf7389e80224f0fa27"/>
+        </deployment>
+        <deployment name="SICCR-HUB-FRONTEND5" runtime-name="hub-web-1.4.0-b341.ear">
+            <content sha1="ae3d3b67fe4ba0c518149258b7912aaa90501785"/>
+        </deployment>
+        <deployment name="SIFEC-INTEGRACAO2" runtime-name="componente-dataprev-web-1.0.0-b425.war">
+            <content sha1="872915b932026f4002e8c5dd52bc262119930dc0"/>
+        </deployment>
+        <deployment name="SICCR-HUB-BACKEND5" runtime-name="hub-api-1.8.0.1-b514.ear">
+            <content sha1="74f0539de41971608141213ade88b1331b351432"/>
+        </deployment>
+        <deployment name="SIFEC-FBN5" runtime-name="sifec-fbn-1.1.0-b119.ear">
+            <content sha1="4eb3e5960a04ec732cb741386a83b54ad0b00c9e"/>
+        </deployment>
+        <deployment name="SICCR-HUB-BACKEND4" runtime-name="hub-api-1.8.1-b518.ear">
+            <content sha1="76511d5db078cce333b014817e307c25e00c6093"/>
+        </deployment>
+        <deployment name="SICVE-ANEXO" runtime-name="sicve-anexo-1.0-1.0-b11.ear">
+            <content sha1="24849b607e5cb06e248209ec8c3a5eac5fb43d27"/>
+        </deployment>
+        <deployment name="SIFEC-INTERNET" runtime-name="fec-1.3.0.7-b72.ear">
+            <content sha1="506a8353570020a1b990fa93872e4f442e311156"/>
+        </deployment>
+        <deployment name="SIRTA" runtime-name="sirta-06.27.00-06.27.00-b2099.ear">
+            <content sha1="9468fedef64dcec6882cd42ba8f945d72c66c82a"/>
+        </deployment>
+        <deployment name="SICCR-HUB-BACKEND2" runtime-name="hub-api-1.9.0-b523.ear">
+            <content sha1="f0998fd20b64ce1ce05bf9099ae7d0466d3a968f"/>
+        </deployment>
+        <deployment name="SIPLD" runtime-name="SIPLD">
+            <content sha1="767af6b8eb460401e2646935b98c4db0263ee326"/>
+        </deployment>
+        <deployment name="SICRS" runtime-name="SICRS">
+            <content sha1="39c313e2545d27b1e7baddad21945ab029d6d2c4"/>
+        </deployment>
+        <deployment name="SICTD-INTRANET" runtime-name="sictd-intranet_3.13.22.18.ear">
+            <content sha1="deb3fc27fe1410b95e48a6e8d7a6914ba7e7df36"/>
+        </deployment>
+        <deployment name="SICTD-INTERNET" runtime-name="sictd-internet_3.13.22.18.ear">
+            <content sha1="5171b4da8c6c3a15550535ce1dcdc5b067df527f"/>
+        </deployment>
+        <deployment name="SICTD-JKLNCTD" runtime-name="digitalizar-intranet_3.13.49.19.ear">
+            <content sha1="4a29ed6cc50882b4f4107df4dd0a3b6df63a0b17"/>
+        </deployment>
+        <deployment name="SICTD-APDCTD" runtime-name="sictd-intranet_3.13.49.19.ear">
+            <content sha1="b3d440f2e872b7799a728dfde3617a090632dbf4"/>
+        </deployment>
+        <deployment name="SIGFI_ECR" runtime-name="sigfi-ecr-1.0.56-1.0.56-b103.ear">
+            <content sha1="b84de6f9d2bd0790bc64f5b460f8a4be112daba5"/>
+        </deployment>
+        <deployment name="SIFEC-CONSTRUCARD" runtime-name="construcard-1.22.0.1-b60.ear">
+            <content sha1="8a1c531a07e3f4ff5efee09ff4323f4044eacf94"/>
+        </deployment>
+        <deployment name="SIEFI" runtime-name="siefi-1.51.0-b323.ear">
+            <content sha1="ed3d90f609c19238cdebd8304682d3ce5f48509e"/>
+        </deployment>
+        <deployment name="SIFEC-BAN2" runtime-name="sifec-ban-1.3.1-b64.ear">
+            <content sha1="5c645c1658317c25d0ce489c2115fde75dc386e3"/>
+        </deployment>
+        <deployment name="SIRTA5" runtime-name="sirta-06.27.04-06.27.04-b2126.ear">
+            <content sha1="084027930d62acf17e18e455e37f4b8f4db48eae"/>
+        </deployment>
+        <deployment name="SICDT-FEC3" runtime-name="sifec-cdt-3.6.24-b666.ear">
+            <content sha1="5bc6d1ebd7d309256d1e6e5843ea8ec7f735e9ce"/>
+        </deployment>
+        <deployment name="SIFEC-CCR" runtime-name="SIFEC-CCR-2.57.1-b2936.ear">
+            <content sha1="f4a64164a39e8bd118fd0f2debb464d7e3ec52dc"/>
+        </deployment>
+        <deployment name="SIFEC-ORIGINACAO2" runtime-name="sifec-originacao-3.11.1-b331.ear">
+            <content sha1="31079bddcacad6b6da1288abaeedc3ab99372886"/>
+        </deployment>
+        <deployment name="SIFEC-FBN" runtime-name="sifec-fbn-1.2.0-b128.ear">
+            <content sha1="6d83739f98d15ac4cc24b8155614534d970494f1"/>
+        </deployment>
+        <deployment name="SIFEC-FBN3" runtime-name="sifec-fbn-1.2.0-b134.ear">
+            <content sha1="d7c1959107e33a32e9793da499bbcf5f632fbebc"/>
+        </deployment>
+        <deployment name="SICCR-PJ2" runtime-name="sifec-ccr-pj-6.12.1-b1398.ear">
+            <content sha1="463f5972a7207470532b44d3200c90b84392da6d"/>
+        </deployment>
+        <deployment name="SIFES2" runtime-name="fes-3.108.5.0-b69.ear">
+            <content sha1="138628786a98a15704ca048531d7649123faa60e"/>
+        </deployment>
+        <deployment name="SIFES4" runtime-name="fes-3.111.0.0-b71.ear">
+            <content sha1="063ad0c74b4b4b4944f5639c479be83c12b14645"/>
+        </deployment>
+        <deployment name="SIFEC-BAN3" runtime-name="sifec-ban-1.2.1-b65.ear">
+            <content sha1="6501f2372bbb4a0ec142ec1df4519023e1d4b76c"/>
+        </deployment>
+        <deployment name="SIPES" runtime-name="sipes-1.6.0.1-b104.ear">
+            <content sha1="1551fc8ddd610731cc98a0baf3edf09d75c71b96"/>
+        </deployment>
+        <deployment name="SICDT-FEC5" runtime-name="sifec-cdt-3.6.11-b673.ear">
+            <content sha1="16186a390a99a2cd1755c291664a6df55b89df93"/>
+        </deployment>
+        <deployment name="SICEM" runtime-name="SicemWEB_6.1.0.9.17.war">
+            <content sha1="0b74e6c5cb9966d5c97263264dd89f62b7047ed2"/>
+        </deployment>
+        <deployment name="SIFEC4" runtime-name="fec-2.77.0.0-b1385.ear">
+            <content sha1="8f2e2af280cde0fe4ab89d992adfd3f1c37c9f65"/>
+        </deployment>
+        <deployment name="SICVE-TIMER" runtime-name="sicve-timer-1.0-1.0-b119.ear">
+            <content sha1="781ad035cfa5bb9d37b31759b845dcaec04fd467"/>
+        </deployment>
+        <deployment name="SICCR-PARAMETROS5" runtime-name="sifec-ccr-parametros-1.4.2.1-b209.ear">
+            <content sha1="402427e0f3603580c67dd4d21ad2573845830149"/>
+        </deployment>
+        <deployment name="SICCR-PJ" runtime-name="sifec-ccr-pj-6.12.1-b1406.ear">
+            <content sha1="3502c4ac66ed8651979d7fb3c4711eaa50a08ef9"/>
+        </deployment>
+        <deployment name="SICCR-PARAMETROS2" runtime-name="sifec-ccr-parametros-1.4.3-b212.ear">
+            <content sha1="b3259125a842112f3b61efdc42fce86f2a849f7f"/>
+        </deployment>
+        <deployment name="SIFES3" runtime-name="fes-3.108.3.0-b85.ear">
+            <content sha1="e39a4eaa313f55f3c30f63dc1fb7d94747d858c6"/>
+        </deployment>
+        <deployment name="SIOPI-INTRANET" runtime-name="SIOPIIntranet-1829-3.21.97-20230118.203513-1.ear">
+            <content sha1="69742dddbd3ed8b64272083dd7a6204f722e49f9"/>
+        </deployment>
+        <deployment name="SIOPI-WS" runtime-name="SIOPIWs-1829-3.21.97-20230118.203539-1.ear">
+            <content sha1="a8d2283b5cd2764a84d915fd664271ba3596c52c"/>
+        </deployment>
+        <deployment name="SIFEC-CCR5" runtime-name="SIFEC-CCR-2.57.1-b2941.ear">
+            <content sha1="97560bf32b74cc5f625361ddabd1aea4ce6833c4"/>
+        </deployment>
+        <deployment name="SICCR-PJ3" runtime-name="sifec-ccr-pj-sprint_49-b1408.ear">
+            <content sha1="e7f4b4a48e1f691511130a019df49beb4cda0883"/>
+        </deployment>
+        <deployment name="SIFEC3" runtime-name="fec-2.95.0.0-b1396.ear">
+            <content sha1="d43b6b092e2a67c85eecd277aefcb9836ec922ca"/>
+        </deployment>
+        <deployment name="SIFEC-CCR2" runtime-name="SIFEC-CCR-2.57.1-b2942.ear">
+            <content sha1="ff5a14ae28a3cb4a3662e0689e40ab38db1c0c9d"/>
+        </deployment>
+        <deployment name="SIATD-INTERNET" runtime-name="siatdEAR-3.36.0.8-b169.ear">
+            <content sha1="ecb3373788302756c83cd4994fa7d956581d4164"/>
+        </deployment>
+        <deployment name="SIFEC" runtime-name="fec-2.91.0.0-b1400.ear">
+            <content sha1="1da1c25fecfeecbcc91a0df6aa73819ab120f55a"/>
+        </deployment>
+        <deployment name="SIFES" runtime-name="fes-3.110.0.0-b92.ear">
+            <content sha1="14f1897b9410fe12a8a6a900052bfbfdac62d602"/>
+        </deployment>
+        <deployment name="SIRTA2" runtime-name="sirta-06.27.07-06.27.07-b2153.ear">
+            <content sha1="92abab8db431eab6faf3545af8d0b769f68e52ea"/>
+        </deployment>
+        <deployment name="SICLI" runtime-name="sicli-02.116.00-b262.ear">
+            <content sha1="115828930d086868e59615b133a550a7f62f0da3"/>
+        </deployment>
+        <deployment name="SICCR-PJ5" runtime-name="sifec-ccr-pj-6.12.1-b1411.ear">
+            <content sha1="d3bc82f844486f2cd6dd8c1863c027836114cd75"/>
+        </deployment>
+        <deployment name="SIFEC-CCR3" runtime-name="SIFEC-CCR-2.57.1-b2943.ear">
+            <content sha1="e12952d8006fe7b97c659f1fc295906234ee9a05"/>
+        </deployment>
+        <deployment name="SICCR-PJ4" runtime-name="sifec-ccr-pj-6.13-b1412.ear">
+            <content sha1="c75ee6698fc8a7cbddf577ed718ec11be70b8050"/>
+        </deployment>
+        <deployment name="SIEMP" runtime-name="siemp-14.27.0.0-b190.ear">
+            <content sha1="13e4f7ab349ad2777677b94217cba9dbfda92b9c"/>
+        </deployment>
+        <deployment name="SICCR-PARAMETROS" runtime-name="sifec-ccr-parametros-1.4.4-b214.ear">
+            <content sha1="43e85c25af1f6600e9335227e4d00eb05fc94adb"/>
+        </deployment>
+        <deployment name="SIFEC2" runtime-name="fec-2.96.0.0-b1405.ear">
+            <content sha1="9322d7e723937f9daa40a2b6dfc478ec43dc3990"/>
+        </deployment>
+        <deployment name="SIRTA3" runtime-name="sirta-06.27.06-06.27.06-b2160.ear">
+            <content sha1="1684318230e35d2f3d4fde302b2b8a04057140c4"/>
+        </deployment>
+        <deployment name="SICLI-APP" runtime-name="sicli_api-01.72.04-b287.ear">
+            <content sha1="1ef52b7bdddd729ca3b3c820a63431f40cdbea82"/>
+        </deployment>
+        <deployment name="SIFEC5" runtime-name="fec-2.91.0.0-b1406.ear">
+            <content sha1="55280b90fc8af0f03037e4f6e22be65c92213164"/>
+        </deployment>
+        <deployment name="SIFEC-CCR4" runtime-name="SIFEC-CCR-2.57.2-b2945.ear">
+            <content sha1="522771b2b838b1ebf3574781d8953a13003ddb93"/>
+        </deployment>
+        <deployment name="SICVE" runtime-name="sicve-1.0-1.0-b1361.ear">
+            <content sha1="84ef47ec85385cd3bd35f3244a88c66a1a375d62"/>
+        </deployment>
+        <deployment name="SICDT-FEC2" runtime-name="sifec-cdt-3.8.0-b678.ear">
+            <content sha1="1c374f59c4276f1cfce881a51d2bac99d4db41a9"/>
+        </deployment>
+        <deployment name="SIFEC-EMP" runtime-name="emp-3.50.0.0-b799.ear">
+            <content sha1="09803c1a541f0b653595ee43f8059e71169ec4a8"/>
+        </deployment>
+        <deployment name="SICDT-FEC" runtime-name="sifec-cdt-3.6.4-b679.ear">
+            <content sha1="f2629297c7f31daa1b2947e254165178fbde7ccf"/>
+        </deployment>
+        <deployment name="SIAEF" runtime-name="siaef-1.0.125-b127.ear">
+            <content sha1="03d687d80bbfb37be5adb1454f53ca41845f6352"/>
+        </deployment>
+        <deployment name="SIFEC-RURAL" runtime-name="rural-2.69.0.3-b800.ear">
+            <content sha1="4ccd7f6b0392121369beb2bf872e8d5f6a489498"/>
+        </deployment>
+        <deployment name="SIPEN" runtime-name="sipen-1.98.0.1-1.98.0.1-b1046.ear">
+            <content sha1="fe94fe0656b993da2c7f5206a8e718715bc2a7ea"/>
+        </deployment>
+        <deployment name="SIRTA4" runtime-name="sirta-06.27.06-06.27.06-b2167.ear">
+            <content sha1="de186a3cb9b722bc13dd037da9029ef1674523c5"/>
+        </deployment>
+        <deployment name="SIATD-INTRANET" runtime-name="siatdEAR-3.38.0.4-b1178.ear">
+            <content sha1="b8e500c58b13f6cde769fb3284901f41775f8f4a"/>
+        </deployment>
+        <deployment name="SIFES-INTERNET" runtime-name="fes-3.109.3.0-b995.ear">
+            <content sha1="113b6e130669e63478ed6005811b1d1efdba9044"/>
+        </deployment>
+    </deployments>
+
+    <server-groups>
+        <server-group name="siefi" profile="full-ha-siefi">
+            <jvm name="JVM_SIEFI">
+                <heap size="2048m" max-size="2048m"/>
+                <permgen size="512m" max-size="512m"/>
+            </jvm>
+            <socket-binding-group ref="caixa-full-ha-sockets"/>
+            <deployments>
+                <deployment name="ojdbc6.jar" runtime-name="ojdbc6.jar"/>
+                <deployment name="SIEFI" runtime-name="siefi-1.51.0-b323.ear"/>
+            </deployments>
+            <system-properties>
+                <property name="javax.net.ssl.keyStorePassword" value="changeit" boot-time="false"/>
+                <property name="javax.net.ssl.trustStorePassword" value="changeit" boot-time="false"/>
+                <property name="javax.net.debug" value="all" boot-time="false"/>
+                <property name="javax.net.ssl.trustStore" value="/upload/des/siefi/siefi.keystore" boot-time="false"/>
+                <property name="CER_RFB_SERVER_LOCAL" value="/upload/des/siefi/Certificado_SIEFI.p12" boot-time="false"/>
+                <property name="CER_RFB_CLIENT_SENHA" value="Sieficx01" boot-time="false"/>
+                <property name="CER_RFB_CLIENT_LOCAL" value="/upload/des/siefi/Certificado_SIEFI.p12" boot-time="false"/>
+                <property name="CER_RFB_SERVER_SENHA" value="Sieficx01" boot-time="false"/>
+                <property name="WSDL_RFB_LOCAL" value="https://preprod-efinanc.receita.fazenda.gov.br/WsEFinanceira/WsRecepcao.asmx?wsdl" boot-time="false"/>
+                <property name="WSDL_RFB_SOAP_ACTION_LOC" value="http://sped.fazenda.gov.br/ReceberLoteEvento" boot-time="false"/>
+                <property name="HTTP_HOST_RFB" value="preprod-efinanc.receita.fazenda.gov.br" boot-time="false"/>
+                <property name="SIEFI_CERTIFICADO_SENHA" value="Siefi1" boot-time="true"/>
+                <property name="SIEFI_ENDPOINT_RFB_CONSULTA" value="https://preprod-efinanc.receita.fazenda.gov.br/WsEFinanceira/WsConsulta.asmx" boot-time="true"/>
+                <property name="SIEFI_PROXY_PORTA" value="80" boot-time="false"/>
+                <property name="SIEFI_PROXY_HOST" value="proxydes.caixa" boot-time="false"/>
+                <property name="SIEFI_NFS_PATH" value="/SIEFI" boot-time="false"/>
+                <property name="SIEFI_CERTIFICADO_PATH" value="/upload/des/siefi/siefi_certificado.jks" boot-time="false"/>
+                <property name="transmissao.folder.path" value="/SIEFI/REINF/transmissao/originais" boot-time="false"/>
+            </system-properties>
+        </server-group>
+        <server-group name="simph" profile="full-ha-simph">
+            <socket-binding-group ref="caixa-full-ha-sockets"/>
+            <system-properties>
+                <property name="simph.api.urlbase" value="simph.desenvolvimento.extracaixa/caixa-api-habitacao/api" boot-time="true"/>
+            </system-properties>
+        </server-group>        
+    </server-groups>
+
+</domain>
